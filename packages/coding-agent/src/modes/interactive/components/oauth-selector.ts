@@ -11,6 +11,7 @@ import {
 	type TUI,
 } from "@earendil-works/pi-tui";
 import { isPreferredProvider } from "../../../core/preferred-providers.ts";
+import { t } from "../../../i18n/messages-ui.ts";
 import { theme } from "../theme/theme.ts";
 import { DynamicBorder } from "./dynamic-border.ts";
 import { getProviderBrandStyle, type ProviderBrandStyle, startBrandAnimation } from "./provider-brand.ts";
@@ -32,7 +33,7 @@ export function formatAuthSelectorProviderType(
 	authType: AuthSelectorProvider["authType"],
 	subscription?: boolean,
 ): string {
-	if (authType === "api_key") return "API key";
+	if (authType === "api_key") return t("api_key");
 	return subscription === false ? "account" : "subscription";
 }
 
@@ -45,7 +46,7 @@ export function formatAuthSelectorProviderStatus(provider: AuthSelectorProvider)
 	}
 	if (
 		!provider.status.source ||
-		provider.status.source === "OAuth" ||
+		provider.status.source === t("oauth") ||
 		provider.status.source === "stored credential"
 	) {
 		return theme.fg("success", " ✓ configured");
@@ -109,7 +110,7 @@ export class OAuthSelectorComponent extends Container implements Focusable {
 		this.addChild(new Spacer(1));
 
 		// Add title
-		const title = mode === "login" ? "Select provider to configure:" : "Select provider to logout:";
+		const title = mode === "login" ? t("select_provider_configure") : t("select_provider_logout");
 		this.addChild(new TruncatedText(theme.fg("accent", theme.bold(title)), 1, 0));
 		this.addChild(new Spacer(1));
 
@@ -217,9 +218,9 @@ export class OAuthSelectorComponent extends Container implements Focusable {
 			const message =
 				this.allProviders.length === 0
 					? this.mode === "login"
-						? "No providers available"
-						: "No providers logged in. Use /login first."
-					: "No matching providers";
+						? t("no_providers_available")
+						: t("no_providers_logged_in")
+					: t("no_matching_providers");
 			this.listContainer.addChild(new TruncatedText(theme.fg("muted", `  ${message}`), 1, 0));
 		}
 	}

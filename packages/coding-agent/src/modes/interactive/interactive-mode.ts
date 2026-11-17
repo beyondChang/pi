@@ -130,6 +130,8 @@ import type { TruncationResult } from "../../core/tools/truncate.ts";
 import { hasTrustRequiringProjectResources, ProjectTrustStore } from "../../core/trust-manager.ts";
 import { getUsageCostBreakdown } from "../../core/usage-totals.ts";
 import { addMcpServerConfig } from "../../extensions/mcp/config.ts";
+import { getLocale, onLocaleChange } from "../../i18n/i18n.ts";
+import { t } from "../../i18n/messages-ui.ts";
 import { getChangelogPath, getNewEntries, normalizeChangelogLinks, parseChangelog } from "../../utils/changelog.ts";
 import { copyToClipboard, readClipboardFilePaths, readClipboardText } from "../../utils/clipboard.ts";
 import { extensionForImageMimeType, readClipboardImage } from "../../utils/clipboard-image.ts";
@@ -369,8 +371,8 @@ function hasDefaultModelProvider(providerId: string): providerId is keyof typeof
 
 function llamaCppPostLoginGuidance(actionLabel: string, loadedModelCount: number): string {
 	return loadedModelCount === 0
-		? `${actionLabel}. No llama.cpp models are loaded. Use /llama to load a model, then /model to select it.`
-		: `${actionLabel}. Use /model to select a loaded llama.cpp model, or /llama to manage models.`;
+		? t("llama_cpp_no_models_loaded", { action: actionLabel })
+		: t("llama_cpp_select_model", { action: actionLabel });
 }
 
 type LoginProviderCompletionOption = {
@@ -380,7 +382,7 @@ type LoginProviderCompletionOption = {
 	subscription?: boolean;
 };
 
-const RADIUS_LOGIN_INTRO = "Radius is a service crafted for Pi by the builders of Pi, Earendil Works";
+const RADIUS_LOGIN_INTRO = t("radius_service_note");
 
 const AUTH_TYPE_ORDER = { oauth: 0, api_key: 1 } satisfies Record<AuthSelectorProvider["authType"], number>;
 
@@ -502,8 +504,8 @@ export class InteractiveMode {
 	private workingMessage: string | undefined = undefined;
 	private workingVisible = true;
 	private workingIndicatorOptions: WorkingIndicatorOptions | undefined = undefined;
-	private readonly defaultWorkingMessage = "Working";
-	private readonly defaultHiddenThinkingLabel = "Thinking...";
+	private readonly defaultWorkingMessage = t("working_label");
+	private readonly defaultHiddenThinkingLabel = t("thinking_label");
 	private hiddenThinkingLabel = this.defaultHiddenThinkingLabel;
 
 	private lastSigintTime = 0;
@@ -754,7 +756,7 @@ export class InteractiveMode {
 		// Define commands for autocomplete
 		const slashCommands: SlashCommand[] = BUILTIN_SLASH_COMMANDS.map((command) => ({
 			name: command.name,
-			description: command.description,
+			description: command.description(),
 			...(command.argumentHint && { argumentHint: command.argumentHint }),
 		}));
 
@@ -889,7 +891,7 @@ export class InteractiveMode {
 				const condensedText = `Updated to v${latestVersion}. Use ${theme.bold("/changelog")} to view full changelog.`;
 				this.chatContainer.addChild(new Text(condensedText, 1, 0));
 			} else {
-				this.chatContainer.addChild(new ThemedText(() => theme.bold(theme.fg("accent", "What's New")), 1, 0));
+				this.chatContainer.addChild(new ThemedText(() => theme.bold(theme.fg("accent", t("whats_new"))), 1, 0));
 				this.chatContainer.addChild(new Spacer(1));
 				this.chatContainer.addChild(this.createChangelogMarkdown(this.changelogMarkdown.trim(), 1, 0));
 				this.chatContainer.addChild(new Spacer(1));
@@ -906,7 +908,7 @@ export class InteractiveMode {
 				this.chatContainer.addChild(new Text(condensedText, 1, 0));
 			} else {
 				this.chatContainer.addChild(
-					new ThemedText(() => theme.bold(theme.fg("accent", "Extension Updates")), 1, 0),
+					new ThemedText(() => theme.bold(theme.fg("accent", t("extension_updates"))), 1, 0),
 				);
 				this.chatContainer.addChild(new Spacer(1));
 				const markdown = this.extensionChangelogUpdates.map((update) => update.markdown).join("\n\n");
@@ -920,7 +922,7 @@ export class InteractiveMode {
 	private mountInteractiveTui(tui: TuiMainScreen | TuiAltScreen, components: readonly Component[]): void {
 		for (const component of components) tui.addChild(component);
 		if (TuiLayouts.isViewportTUI(tui)) {
-			if (!this.fullscreenLayoutRoot) throw new Error("Fullscreen layout is not initialized");
+			if (!this.fullscreenLayoutRoot) throw new Error(t("fullscreen_not_initialized"));
 			tui.setLayoutRoot(this.fullscreenLayoutRoot);
 		}
 	}
@@ -1063,36 +1065,36 @@ export class InteractiveMode {
 
 			const expandedInstructions = () =>
 				[
-					hint("app.interrupt", "to interrupt"),
-					hint("app.clear", "to clear"),
-					rawKeyHint(`${keyText("app.clear")} twice`, "to exit"),
-					hint("app.exit", "to exit (empty)"),
-					hint("app.suspend", "to suspend"),
-					keyHint("tui.editor.deleteToLineEnd", "to delete to end"),
-					hint("app.thinking.cycle", "to cycle thinking level"),
+					hint("app.interrupt", t("hint_to_interrupt")),
+					hint("app.clear", t("hint_to_clear")),
+					rawKeyHint(`${keyText("app.clear")} twice`, t("hint_to_exit")),
+					hint("app.exit", t("hint_to_exit_empty")),
+					hint("app.suspend", t("hint_to_suspend")),
+					keyHint("tui.editor.deleteToLineEnd", t("hint_to_delete_to_end")),
+					hint("app.thinking.cycle", t("hint_to_cycle_thinking")),
 					rawKeyHint(
 						`${keyText("app.model.cycleForward")}/${keyText("app.model.cycleBackward")}`,
-						"to cycle models",
+						t("hint_to_cycle_models"),
 					),
-					hint("app.model.select", "to select model"),
-					hint("app.tools.expand", "to expand tools"),
-					hint("app.thinking.toggle", "to expand thinking"),
-					hint("app.editor.external", "for external editor"),
-					rawKeyHint("/", "for commands"),
-					rawKeyHint("!", "to run bash"),
-					rawKeyHint("!!", "to run bash (no context)"),
-					hint("app.message.followUp", "to queue follow-up"),
-					hint("app.message.dequeue", "to edit all queued messages"),
-					hint("app.clipboard.pasteImage", "to paste files on macOS, images, or text"),
-					rawKeyHint("drop files", "to attach"),
+					hint("app.model.select", t("hint_to_select_model")),
+					hint("app.tools.expand", t("hint_to_expand_tools")),
+					hint("app.thinking.toggle", t("hint_to_expand_thinking")),
+					hint("app.editor.external", t("hint_for_external_editor")),
+					rawKeyHint("/", t("hint_for_commands")),
+					rawKeyHint("!", t("hint_to_run_bash")),
+					rawKeyHint("!!", t("hint_to_run_bash_no_context")),
+					hint("app.message.followUp", t("hint_to_queue_follow_up")),
+					hint("app.message.dequeue", t("hint_to_edit_queued")),
+					hint("app.clipboard.pasteImage", t("hint_to_paste")),
+					rawKeyHint("drop files", t("hint_to_attach")),
 				].join("\n");
 			const compactInstructions = () =>
 				[
-					hint("app.interrupt", "interrupt"),
-					rawKeyHint(`${keyText("app.clear")}/${keyText("app.exit")}`, "clear/exit"),
-					rawKeyHint("/", "commands"),
-					rawKeyHint("!", "bash"),
-					hint("app.tools.expand", "more"),
+					hint("app.interrupt", t("hint_interrupt")),
+					rawKeyHint(`${keyText("app.clear")}/${keyText("app.exit")}`, t("hint_clear_exit")),
+					rawKeyHint("/", t("hint_commands")),
+					rawKeyHint("!", t("hint_bash")),
+					hint("app.tools.expand", t("hint_more")),
 				].join(theme.fg("muted", " · "));
 			const compactOnboarding = () =>
 				theme.fg(
@@ -1146,6 +1148,14 @@ export class InteractiveMode {
 		// Set up theme file watcher
 		onThemeChange(() => {
 			this.ui.invalidate();
+			this.updateEditorBorderColor();
+			this.ui.requestRender();
+		});
+
+		// Set up language watcher: a live language switch re-renders the whole interface
+		onLocaleChange(() => {
+			this.ui.invalidate();
+			this.footer.invalidate();
 			this.updateEditorBorderColor();
 			this.ui.requestRender();
 		});
@@ -1246,12 +1256,12 @@ export class InteractiveMode {
 		}
 
 		if (migratedProviders && migratedProviders.length > 0) {
-			this.showWarning(`Migrated credentials to auth.json: ${migratedProviders.join(", ")}`);
+			this.showWarning(t("migrated_credentials", { providers: migratedProviders.join(", ") }));
 		}
 
 		const modelsJsonError = this.session.modelRuntime.getError();
 		if (modelsJsonError) {
-			this.showError(`models.json error: ${modelsJsonError}`);
+			this.showError(t("models_json_error", { error: modelsJsonError }));
 		}
 
 		if (modelFallbackMessage) {
@@ -1261,9 +1271,7 @@ export class InteractiveMode {
 		const crash = takeUnnotifiedCrash();
 		if (crash) {
 			const when = new Date(crash.timestamp).toLocaleString();
-			this.showWarning(
-				`${APP_NAME} crashed on ${when} (${crash.message}). Run /bug to report it; the crash details are attached automatically.`,
-			);
+			this.showWarning(t("crash_warning", { app: APP_NAME, when, message: crash.message }));
 		}
 
 		void this.maybeWarnAboutAnthropicSubscriptionAuth();
@@ -1273,7 +1281,7 @@ export class InteractiveMode {
 			try {
 				await this.session.prompt(initialMessage, { images: initialImages });
 			} catch (error: unknown) {
-				const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+				const errorMessage = error instanceof Error ? error.message : t("unknown_error_occurred");
 				this.showError(errorMessage);
 			}
 		}
@@ -1283,7 +1291,7 @@ export class InteractiveMode {
 				try {
 					await this.session.prompt(message);
 				} catch (error: unknown) {
-					const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+					const errorMessage = error instanceof Error ? error.message : t("unknown_error_occurred");
 					this.showError(errorMessage);
 				}
 			}
@@ -1295,7 +1303,7 @@ export class InteractiveMode {
 			try {
 				await this.session.prompt(userInput);
 			} catch (error: unknown) {
-				const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+				const errorMessage = error instanceof Error ? error.message : t("unknown_error_occurred");
 				this.showError(errorMessage);
 			}
 		}
@@ -1986,7 +1994,7 @@ export class InteractiveMode {
 						contextFiles.map((contextFile) => this.formatContextPath(contextFile.path)),
 						{ sort: false },
 					);
-				addLoadedSection("Context", contextCompactList, contextList);
+				addLoadedSection(t("context_label"), contextCompactList, contextList);
 			}
 
 			const skills = skillsResult.skills;
@@ -2000,7 +2008,7 @@ export class InteractiveMode {
 						formatPackagePath: (item) => this.getShortPath(item.path, item.sourceInfo),
 					});
 				const skillCompactList = () => formatCompactList(skills.map((skill) => skill.name));
-				addLoadedSection("Skills", skillCompactList, skillList);
+				addLoadedSection(t("skills_label"), skillCompactList, skillList);
 			}
 
 			const templates = this.session.promptTemplates;
@@ -2021,7 +2029,7 @@ export class InteractiveMode {
 						},
 					});
 				const promptCompactList = () => formatCompactList(templates.map((template) => `/${template.name}`));
-				addLoadedSection("Prompts", promptCompactList, templateList);
+				addLoadedSection(t("prompts_label"), promptCompactList, templateList);
 			}
 
 			if (extensions.length > 0) {
@@ -2034,7 +2042,7 @@ export class InteractiveMode {
 					});
 				const extensionLabels = this.getCompactExtensionLabels(extensions);
 				const extensionCompactList = () => formatCompactList(extensionLabels);
-				addLoadedSection("Extensions", extensionCompactList, extList, "mdHeading");
+				addLoadedSection(t("extensions_label"), extensionCompactList, extList, "mdHeading");
 			}
 		}
 
@@ -2110,7 +2118,7 @@ export class InteractiveMode {
 					try {
 						return await this.runtimeHost.newSession(options);
 					} catch (error: unknown) {
-						return this.handleFatalRuntimeError("Failed to create session", error);
+						return this.handleFatalRuntimeError(t("failed_to_create_session"), error);
 					}
 				},
 				fork: async (entryId, options) => {
@@ -2118,11 +2126,11 @@ export class InteractiveMode {
 						const result = await this.runtimeHost.fork(entryId, options);
 						if (!result.cancelled) {
 							this.editor.setText(result.selectedText ?? "");
-							this.showStatus("Forked to new session");
+							this.showStatus(t("forked_to_new_session"));
 						}
 						return { cancelled: result.cancelled };
 					} catch (error: unknown) {
-						return this.handleFatalRuntimeError("Failed to fork session", error);
+						return this.handleFatalRuntimeError(t("failed_to_fork_session"), error);
 					}
 				},
 				navigateTree: async (targetId, options) => {
@@ -2141,7 +2149,7 @@ export class InteractiveMode {
 					if (result.editorText && !this.editor.getText().trim()) {
 						this.editor.setText(result.editorText);
 					}
-					this.showStatus("Navigated to selected point");
+					this.showStatus(t("navigated_to_selected_point"));
 					void this.flushCompactionQueue({ willRetry: false });
 					return { cancelled: false };
 				},
@@ -2288,8 +2296,8 @@ export class InteractiveMode {
 	}
 
 	private crashReportInstructions(): string {
-		const resume = this.session.sessionFile ? `run \`${APP_NAME} -r\` to resume the session, then` : "start pi and";
-		return `To report this crash: ${resume} run /bug. The crash details are attached automatically.`;
+		const resume = this.session.sessionFile ? t("crash_resume_run", { app: APP_NAME }) : t("crash_resume_start");
+		return t("crash_report_instructions", { resume });
 	}
 
 	private suggestBugReport(): void {
@@ -2324,13 +2332,13 @@ export class InteractiveMode {
 		this.installChangeWarningShown = true;
 		const cause =
 			change.kind === "updated"
-				? `${APP_NAME} was updated to ${change.version} while this session was running (${VERSION})`
-				: `The ${APP_NAME} installation this session runs from was removed or replaced`;
+				? t("install_updated_cause", { app: APP_NAME, version: change.version, current: VERSION })
+				: t("install_replaced_cause", { app: APP_NAME });
 		const resumeCommand = formatResumeCommand(this.sessionManager);
 		const restart = resumeCommand
-			? `Restart with \`${resumeCommand}\` to continue this session.`
-			: `Restart ${APP_NAME}.`;
-		this.showWarning(`${cause}. Features that load code on demand can fail until restart. ${restart}`);
+			? t("install_restart_resume", { command: resumeCommand })
+			: t("install_restart_plain", { app: APP_NAME });
+		this.showWarning(t("install_change_warning", { cause, restart }));
 		return true;
 	}
 
@@ -2425,7 +2433,9 @@ export class InteractiveMode {
 				if (matchesKey(data, shortcutStr as KeyId)) {
 					// Run handler async, don't block input
 					Promise.resolve(shortcut.handler(createContext())).catch((err) => {
-						this.showError(`Shortcut handler error: ${err instanceof Error ? err.message : String(err)}`);
+						this.showError(
+							t("shortcut_handler_error", { error: err instanceof Error ? err.message : String(err) }),
+						);
 					});
 					return true;
 				}
@@ -2897,11 +2907,11 @@ export class InteractiveMode {
 		message: string,
 		opts?: ExtensionUIDialogOptions,
 	): Promise<boolean> {
-		const result = await this.showExtensionSelector(`${title}\n${message}`, ["Yes", "No"], opts, {
+		const result = await this.showExtensionSelector(`${title}\n${message}`, [t("yes_label"), t("no_label")], opts, {
 			kind: "permission",
 			message: title,
 		});
-		return result === "Yes";
+		return result === t("yes_label");
 	}
 
 	private async promptForMissingSessionCwd(
@@ -3279,7 +3289,7 @@ export class InteractiveMode {
 			const filePaths = await readClipboardFilePaths();
 			if (filePaths) {
 				if (filePaths.some((filePath) => /\p{Cc}/u.test(filePath))) {
-					throw new Error("Clipboard file path contains control characters");
+					throw new Error(t("clipboard_path_control_chars"));
 				}
 				const paths = this.isBashMode ? filePaths.map(quoteIfNeeded).join(" ") : filePaths.join("\n");
 				const cursor = this.editor.getCursor?.();
@@ -3312,13 +3322,13 @@ export class InteractiveMode {
 				this.ui.requestRender();
 			}
 		} catch (error) {
-			this.showError(`Failed to paste from clipboard: ${error instanceof Error ? error.message : String(error)}`);
+			this.showError(t("clipboard_paste_failed", { error: error instanceof Error ? error.message : String(error) }));
 		}
 	}
 
 	private handleStartupSubmit(text: string): void {
 		this.editor.setText(text);
-		this.showStatus("Startup is still in progress");
+		this.showStatus(t("startup_still_in_progress"));
 	}
 
 	private setupEditorSubmitHandler(): void {
@@ -3474,7 +3484,7 @@ export class InteractiveMode {
 				const command = isExcluded ? text.slice(2).trim() : text.slice(1).trim();
 				if (command) {
 					if (this.session.isBashRunning) {
-						this.showWarning("A bash command is already running. Press Esc to cancel it first.");
+						this.showWarning(t("bash_already_running"));
 						this.editor.setText(text);
 						return;
 					}
@@ -3692,14 +3702,14 @@ export class InteractiveMode {
 						errorMessage =
 							retryAttempt > 0
 								? `Aborted after ${retryAttempt} retry attempt${retryAttempt > 1 ? "s" : ""}`
-								: "Operation aborted";
+								: t("operation_aborted");
 						this.streamingMessage.errorMessage = errorMessage;
 					}
 					this.streamingComponent.updateContent(this.streamingMessage, false);
 
 					if (this.streamingMessage.stopReason === "aborted" || this.streamingMessage.stopReason === "error") {
 						if (!errorMessage) {
-							errorMessage = this.streamingMessage.errorMessage || "Error";
+							errorMessage = this.streamingMessage.errorMessage || t("error_label");
 						}
 						for (const [, component] of this.pendingTools.entries()) {
 							component.updateResult({
@@ -3828,9 +3838,9 @@ export class InteractiveMode {
 				this.clearStatusIndicator("compaction");
 				if (event.aborted) {
 					if (event.reason === "manual") {
-						this.showError("Compaction cancelled");
+						this.showError(t("compaction_cancelled"));
 					} else {
-						this.showStatus("Auto-compaction cancelled");
+						this.showStatus(t("auto_compaction_cancelled"));
 					}
 				} else if (event.result) {
 					const entries = this.sessionManager.buildContextEntries();
@@ -3891,7 +3901,9 @@ export class InteractiveMode {
 				this.clearStatusIndicator("retry");
 				// Show error only on final failure (success shows normal response)
 				if (!event.success) {
-					this.showError(`Retry failed after ${event.attempt} attempts: ${event.finalError || "Unknown error"}`);
+					this.showError(
+						`Retry failed after ${event.attempt} attempts: ${event.finalError || t("unknown_error")}`,
+					);
 				}
 				this.ui.requestRender();
 				break;
@@ -4215,9 +4227,9 @@ export class InteractiveMode {
 								errorMessage =
 									retryAttempt > 0
 										? `Aborted after ${retryAttempt} retry attempt${retryAttempt > 1 ? "s" : ""}`
-										: "Operation aborted";
+										: t("operation_aborted");
 							} else {
-								errorMessage = message.errorMessage || "Error";
+								errorMessage = message.errorMessage || t("error_label");
 							}
 							component.updateResult({ content: [{ type: "text", text: errorMessage }], isError: true });
 						} else {
@@ -4308,7 +4320,7 @@ export class InteractiveMode {
 		const { usage } = notice;
 		const tokens = usage.input + usage.output + usage.cacheRead + usage.cacheWrite;
 		const cost = usage.cost.total >= 0.01 ? ` (~$${usage.cost.total.toFixed(2)})` : "";
-		const label = notice.kind === "compaction" ? "Compaction" : "Branch summary";
+		const label = notice.kind === "compaction" ? t("compaction_label") : t("branch_summary");
 		this.chatContainer.addChild(new Spacer(1));
 		this.chatContainer.addChild(
 			new ThemedText(() => theme.fg("warning", `${label}: ${formatTokens(tokens)} tokens billed${cost}`), 1, 0),
@@ -4350,14 +4362,9 @@ export class InteractiveMode {
 		}
 		if (droppedCount <= previousDroppedCount) return;
 
-		const noun = droppedCount === 1 ? "thinking block" : "thinking blocks";
 		this.chatContainer.addChild(new Spacer(1));
 		this.chatContainer.addChild(
-			new ThemedText(
-				() => theme.fg("warning", `Anthropic dropped ${droppedCount} ${noun} (details in session)`),
-				1,
-				0,
-			),
+			new ThemedText(() => theme.fg("warning", t("anthropic_dropped_thinking", { count: droppedCount })), 1, 0),
 		);
 	}
 
@@ -4378,12 +4385,12 @@ export class InteractiveMode {
 		if (miss.missedTokens < 20_000 && miss.missedCost < 0.1) return;
 
 		const cost = miss.missedCost >= 0.01 ? ` (~$${miss.missedCost.toFixed(2)})` : "";
-		const reBilled = `${formatTokens(miss.missedTokens)} tokens re-billed${cost}`;
-		let label = "Cache miss";
+		const reBilled = t("cache_miss_rebilled", { tokens: formatTokens(miss.missedTokens), cost });
+		let label = t("cache_miss");
 		if (miss.modelChanged) {
-			label = "Cache miss after model switch";
+			label = t("cache_miss_after_model_switch");
 		} else if (miss.idleMs >= CACHE_TTL_MS) {
-			label = `Cache miss after ${Math.round(miss.idleMs / 60_000)}m idle`;
+			label = t("cache_miss_after_idle", { minutes: Math.round(miss.idleMs / 60_000) });
 		}
 		this.chatContainer.addChild(new Spacer(1));
 		this.chatContainer.addChild(new ThemedText(() => theme.fg("warning", `${label}: ${reBilled}`), 1, 0));
@@ -4401,8 +4408,7 @@ export class InteractiveMode {
 		const allEntries = this.sessionManager.getEntries();
 		const compactionCount = allEntries.filter((e) => e.type === "compaction").length;
 		if (compactionCount > 0) {
-			const times = compactionCount === 1 ? "1 time" : `${compactionCount} times`;
-			this.showStatus(`Session compacted ${times}`);
+			this.showStatus(t("session_compacted", { count: compactionCount }));
 		}
 	}
 
@@ -4416,11 +4422,7 @@ export class InteractiveMode {
 		}
 		this.chatContainer.addChild(
 			new ThemedText(
-				() =>
-					theme.fg(
-						"warning",
-						`This project is not trusted. Project ${CONFIG_DIR_NAME} resources and packages are ignored. Use /trust to save a trust decision, then restart pi.`,
-					),
+				() => theme.fg("warning", t("project_not_trusted_warning", { configDir: CONFIG_DIR_NAME })),
 				1,
 				0,
 			),
@@ -4507,7 +4509,7 @@ export class InteractiveMode {
 
 		const resumeCommand = formatResumeCommand(this.sessionManager);
 		if (resumeCommand) {
-			process.stdout.write(`${chalk.dim("To resume this session:")} ${resumeCommand}\n`);
+			process.stdout.write(`${chalk.dim(t("to_resume_session"))} ${resumeCommand}\n`);
 		}
 
 		process.exit(0);
@@ -4621,7 +4623,7 @@ export class InteractiveMode {
 
 	private handleCtrlZ(): void {
 		if (process.platform === "win32") {
-			this.showStatus("Suspend to background is not supported on Windows");
+			this.showStatus(t("suspend_not_supported_windows"));
 			return;
 		}
 
@@ -4691,9 +4693,9 @@ export class InteractiveMode {
 	private handleDequeue(): void {
 		const restored = this.restoreQueuedMessagesToEditor();
 		if (restored === 0) {
-			this.showStatus("No queued messages to restore");
+			this.showStatus(t("no_queued_messages_to_restore"));
 		} else {
-			this.showStatus(`Restored ${restored} queued message${restored > 1 ? "s" : ""} to editor`);
+			this.showStatus(t("restored_queued_messages", { count: restored }));
 		}
 	}
 
@@ -4711,11 +4713,11 @@ export class InteractiveMode {
 	private cycleThinkingLevel(): void {
 		const newLevel = this.session.cycleThinkingLevel();
 		if (newLevel === undefined) {
-			this.showStatus("Current model does not support thinking");
+			this.showStatus(t("current_model_no_thinking"));
 		} else {
 			this.footer.invalidate();
 			this.updateEditorBorderColor();
-			this.showStatus(`Thinking level: ${newLevel}`);
+			this.showStatus(t("thinking_level_status", { level: newLevel }));
 		}
 	}
 
@@ -4723,14 +4725,17 @@ export class InteractiveMode {
 		try {
 			const result = await this.session.cycleModel(direction);
 			if (result === undefined) {
-				const msg = this.session.scopedModels.length > 0 ? "Only one model in scope" : "Only one model available";
+				const msg =
+					this.session.scopedModels.length > 0 ? t("only_one_model_in_scope") : t("only_one_model_available");
 				this.showStatus(msg);
 			} else {
 				this.footer.invalidate();
 				this.updateEditorBorderColor();
-				const thinkingStr =
-					result.model.reasoning && result.thinkingLevel !== "off" ? ` (thinking: ${result.thinkingLevel})` : "";
-				this.showStatus(`Switched to ${result.model.name || result.model.id}${thinkingStr}`);
+				const thinking =
+					result.model.reasoning && result.thinkingLevel !== "off" ? result.thinkingLevel : undefined;
+				this.showStatus(
+					t("switched_to_model", { model: result.model.name || result.model.id, thinking: thinking ?? "" }),
+				);
 				void this.maybeWarnAboutAnthropicSubscriptionAuth(result.model);
 			}
 		} catch (error) {
@@ -4757,7 +4762,7 @@ export class InteractiveMode {
 				}
 			}
 		}
-		this.showStatus(`Tool output: ${expanded ? "expanded" : "collapsed"}`);
+		this.showStatus(t(expanded ? "tool_output_expanded" : "tool_output_collapsed"));
 	}
 
 	/** Update rendered assistant messages without rebuilding live tool components. */
@@ -4774,7 +4779,7 @@ export class InteractiveMode {
 		this.hideThinkingBlock = !this.hideThinkingBlock;
 		this.settingsManager.setHideThinkingBlock(this.hideThinkingBlock);
 		this.updateThinkingBlockVisibility();
-		this.showStatus(`Thinking blocks: ${this.hideThinkingBlock ? "hidden" : "visible"}`);
+		this.showStatus(t(this.hideThinkingBlock ? "thinking_blocks_hidden" : "thinking_blocks_visible"));
 	}
 
 	private async handleOpenExternalEditor(): Promise<void> {
@@ -4827,14 +4832,18 @@ export class InteractiveMode {
 			const changelogLink = getCapabilities().hyperlinks
 				? hyperlink(theme.fg("accent", changelogUrl), changelogUrl)
 				: theme.fg("accent", changelogUrl);
-			return theme.fg("muted", "Changelog: ") + changelogLink;
+			return theme.fg("muted", t("changelog_label")) + changelogLink;
 		};
 		const note = release.note?.trim();
 
 		this.chatContainer.addChild(new Spacer(1));
 		this.chatContainer.addChild(new DynamicBorder((text) => theme.fg("warning", text)));
 		this.chatContainer.addChild(
-			new ThemedText(() => `${theme.bold(theme.fg("warning", "Update Available"))}\n${updateInstruction()}`, 1, 0),
+			new ThemedText(
+				() => `${theme.bold(theme.fg("warning", t("update_available")))}\n${updateInstruction()}`,
+				1,
+				0,
+			),
 		);
 		if (note) {
 			this.chatContainer.addChild(new Spacer(1));
@@ -4850,7 +4859,7 @@ export class InteractiveMode {
 
 	showPackageUpdateNotification(packages: string[]): void {
 		const updateInstruction = () =>
-			theme.fg("muted", "Package updates are available. Run ") +
+			theme.fg("muted", t("package_updates_available_detail")) +
 			theme.fg("accent", `${APP_NAME} update --extensions`);
 		const packageLines = packages.map((pkg) => `- ${pkg}`).join("\n");
 
@@ -4859,7 +4868,7 @@ export class InteractiveMode {
 		this.chatContainer.addChild(
 			new ThemedText(
 				() =>
-					`${theme.bold(theme.fg("warning", "Package Updates Available"))}\n${updateInstruction()}\n${theme.fg("muted", "Packages:")}\n${packageLines}`,
+					`${theme.bold(theme.fg("warning", t("package_updates_available")))}\n${updateInstruction()}\n${theme.fg("muted", t("packages_label"))}\n${packageLines}`,
 				1,
 				0,
 			),
@@ -4953,7 +4962,7 @@ export class InteractiveMode {
 		this.editor.addToHistory?.(text);
 		this.editor.setText("");
 		this.updatePendingMessagesDisplay();
-		this.showStatus("Queued message for after compaction");
+		this.showStatus(t("queued_message_after_compaction"));
 	}
 
 	private isExtensionCommand(text: string): boolean {
@@ -4980,9 +4989,10 @@ export class InteractiveMode {
 			this.compactionQueuedMessages = queuedMessages;
 			this.updatePendingMessagesDisplay();
 			this.showError(
-				`Failed to send queued message${queuedMessages.length > 1 ? "s" : ""}: ${
-					error instanceof Error ? error.message : String(error)
-				}`,
+				t("queued_message_failed", {
+					count: queuedMessages.length,
+					error: error instanceof Error ? error.message : String(error),
+				}),
 			);
 		};
 
@@ -5123,6 +5133,7 @@ export class InteractiveMode {
 					currentTheme: this.themeController.getThemeSelection() || SYSTEM_THEME_NAME,
 					terminalTheme: this.themeController.getTerminalTheme(),
 					availableThemes: getAvailableThemes(),
+					currentLanguage: this.settingsManager.getLanguage() ?? getLocale(),
 					hideThinkingBlock: this.hideThinkingBlock,
 					mermaidRenderingMode: this.settingsManager.getMermaidRenderingMode(),
 					collapseChangelog: this.settingsManager.getCollapseChangelog(),
@@ -5192,11 +5203,11 @@ export class InteractiveMode {
 					onHttpIdleTimeoutMsChange: (timeoutMs) => {
 						this.settingsManager.setHttpIdleTimeoutMs(timeoutMs);
 						configureHttpDispatcher(timeoutMs);
-						this.showStatus(`HTTP idle timeout: ${formatHttpIdleTimeoutMs(timeoutMs)}`);
+						this.showStatus(t("http_idle_timeout_status", { value: formatHttpIdleTimeoutMs(timeoutMs) }));
 					},
 					onCacheWarmingModeChange: (mode) => {
 						this.session.setCacheWarmingMode(mode);
-						this.showStatus(`Cache warming: ${mode}`);
+						this.showStatus(t("cache_warming_status", { mode }));
 					},
 					onModelThinkingLevelChange: (provider, modelId, level) => {
 						this.settingsManager.setModelThinkingLevel(provider, modelId, level);
@@ -5224,6 +5235,9 @@ export class InteractiveMode {
 						this.themeController.setThemeSetting(themeSetting);
 					},
 					onThemePreview: (themeName) => this.themeController.preview(themeName),
+					onLanguageChange: (language) => {
+						this.settingsManager.setLanguage(language);
+					},
 					onHideThinkingBlockChange: (hidden) => {
 						this.hideThinkingBlock = hidden;
 						this.settingsManager.setHideThinkingBlock(hidden);
@@ -5299,12 +5313,12 @@ export class InteractiveMode {
 					onTuiModeChange: (mode) => {
 						if (!this.switchTuiMode(mode)) {
 							selector?.getSettingsList().updateValue("tui-mode", this.ui.mode);
-							this.showStatus("Close active overlays before changing TUI mode");
+							this.showStatus(t("close_overlays_before_tui_mode"));
 							return;
 						}
 						this.settingsManager.setTuiMode(mode);
 						if (!this.activeStatusIndicator) this.statusContainer.clear();
-						this.showStatus(`TUI mode: ${mode}`);
+						this.showStatus(t("tui_mode_status", { mode }));
 					},
 					onFullscreenExitOutputChange: (output) => {
 						this.settingsManager.setFullscreenExitOutput(output);
@@ -5344,7 +5358,7 @@ export class InteractiveMode {
 		const normalized = searchTerm.trim().toLowerCase();
 		const level = availableLevels.find((candidate) => candidate.toLowerCase() === normalized);
 		if (!level) {
-			this.showError(`Unknown thinking level "${searchTerm}". Available levels: ${availableLevels.join(", ")}.`);
+			this.showError(t("unknown_thinking_level", { term: searchTerm, levels: availableLevels.join(", ") }));
 			return;
 		}
 
@@ -5356,7 +5370,9 @@ export class InteractiveMode {
 			this.session.setThinkingLevel(level, { persist });
 			this.footer.invalidate();
 			this.updateEditorBorderColor();
-			this.showStatus(persist ? `Default thinking level: ${level}` : `Thinking level: ${level}`);
+			this.showStatus(
+				persist ? t("default_thinking_level_status", { level }) : t("thinking_level_status", { level }),
+			);
 		} catch (error) {
 			this.showError(error instanceof Error ? error.message : String(error));
 		}
@@ -5395,7 +5411,7 @@ export class InteractiveMode {
 				await this.session.setModel(model, { persist: false });
 				this.footer.invalidate();
 				this.updateEditorBorderColor();
-				this.showStatus(`Model: ${model.id}`);
+				this.showStatus(t("model_status", { model: model.id }));
 				void this.maybeWarnAboutAnthropicSubscriptionAuth(model);
 			} catch (error) {
 				this.showError(error instanceof Error ? error.message : String(error));
@@ -5414,7 +5430,7 @@ export class InteractiveMode {
 		const cachedMatch = findExactModelReferenceMatch(searchTerm, cachedModels);
 		if (cachedMatch || this.session.scopedModels.length > 0) return cachedMatch;
 
-		this.showStatus("Refreshing model catalogs…");
+		this.showStatus(t("refreshing_model_catalogs"));
 		const controller = new AbortController();
 		let timedOut = false;
 		const timeout = setTimeout(() => {
@@ -5424,15 +5440,15 @@ export class InteractiveMode {
 		try {
 			const result = await refreshModelCatalogs(this.session.modelRuntime, controller.signal);
 			if (result.aborted && timedOut) {
-				this.showWarning("Model refresh timed out; searching cached models.");
+				this.showWarning(t("model_refresh_timed_out"));
 			} else if (result.errors.size > 0) {
-				this.showWarning(`Could not refresh ${[...result.errors.keys()].join(", ")}; searching cached models.`);
+				this.showWarning(t("model_refresh_errors_searching", { providers: [...result.errors.keys()].join(", ") }));
 			}
 		} catch (error) {
 			this.showWarning(
 				timedOut
-					? "Model refresh timed out; searching cached models."
-					: `Could not refresh model catalogs: ${error instanceof Error ? error.message : String(error)}`,
+					? t("model_refresh_timed_out")
+					: t("model_refresh_failed_searching", { error: error instanceof Error ? error.message : String(error) }),
 			);
 		} finally {
 			clearTimeout(timeout);
@@ -5540,7 +5556,11 @@ export class InteractiveMode {
 					this.footer.invalidate();
 					this.updateEditorBorderColor();
 					done();
-					this.showStatus(persist ? `Default model: ${model.provider}/${model.id}` : `Model: ${model.id}`);
+					this.showStatus(
+						persist
+							? t("default_model_status", { model: `${model.provider}/${model.id}` })
+							: t("model_status", { model: model.id }),
+					);
 					void this.maybeWarnAboutAnthropicSubscriptionAuth(model);
 				} catch (error) {
 					done();
@@ -5620,7 +5640,7 @@ export class InteractiveMode {
 				{
 					allModels: availableModels,
 					enabledModelIds: currentEnabledIds,
-					refreshStatus: "Refreshing model catalogs…",
+					refreshStatus: t("refreshing_model_catalogs"),
 				},
 				{
 					onChange: (enabledIds) => {
@@ -5634,7 +5654,7 @@ export class InteractiveMode {
 							enabledIds.every((id) => availableModelIds.has(id));
 						const newPatterns = enabledIds === null || allEnabled ? undefined : enabledIds;
 						this.settingsManager.setEnabledModels(newPatterns ? [...newPatterns] : undefined);
-						this.showStatus("Model selection saved to settings");
+						this.showStatus(t("model_selection_saved"));
 					},
 					onCancel: () => {
 						done();
@@ -5655,14 +5675,14 @@ export class InteractiveMode {
 					}
 					if (currentEnabledIds !== null) updateSessionModels(currentEnabledIds);
 					if (result.aborted && timedOut) {
-						selector.setRefreshStatus("Model refresh timed out; showing cached models.", "warning");
+						selector.setRefreshStatus(t("model_refresh_timed_out_cached"), "warning");
 					} else if (result.errors.size > 0) {
 						selector.setRefreshStatus(
-							`Could not refresh ${[...result.errors.keys()].join(", ")}; showing cached models.`,
+							t("model_refresh_errors_showing", { providers: [...result.errors.keys()].join(", ") }),
 							"warning",
 						);
 					} else {
-						selector.setRefreshStatus("Model catalogs refreshed.", "success");
+						selector.setRefreshStatus(t("model_catalogs_refreshed"), "success");
 					}
 					this.ui.requestRender();
 				})
@@ -5670,8 +5690,10 @@ export class InteractiveMode {
 					if (disposed) return;
 					selector.setRefreshStatus(
 						timedOut
-							? "Model refresh timed out; showing cached models."
-							: `Could not refresh model catalogs: ${error instanceof Error ? error.message : String(error)}`,
+							? t("model_refresh_timed_out_cached")
+							: t("model_refresh_failed_searching", {
+									error: error instanceof Error ? error.message : String(error),
+								}),
 						"warning",
 					);
 					this.ui.requestRender();
@@ -5693,7 +5715,7 @@ export class InteractiveMode {
 		const userMessages = this.session.getUserMessagesForForking();
 
 		if (userMessages.length === 0) {
-			this.showStatus("No messages to fork from");
+			this.showStatus(t("no_messages_to_fork_from"));
 			return;
 		}
 
@@ -5712,7 +5734,7 @@ export class InteractiveMode {
 						}
 
 						this.editor.setText(result.selectedText ?? "");
-						this.showStatus("Forked to new session");
+						this.showStatus(t("forked_to_new_session"));
 					} catch (error: unknown) {
 						this.showError(error instanceof Error ? error.message : String(error));
 					}
@@ -5730,7 +5752,7 @@ export class InteractiveMode {
 	private async handleCloneCommand(): Promise<void> {
 		const leafId = this.sessionManager.getLeafId();
 		if (!leafId) {
-			this.showStatus("Nothing to clone yet");
+			this.showStatus(t("nothing_to_clone_yet"));
 			return;
 		}
 
@@ -5742,7 +5764,7 @@ export class InteractiveMode {
 			}
 
 			this.editor.setText("");
-			this.showStatus("Cloned to new session");
+			this.showStatus(t("cloned_to_new_session"));
 		} catch (error: unknown) {
 			this.showError(error instanceof Error ? error.message : String(error));
 		}
@@ -5754,7 +5776,7 @@ export class InteractiveMode {
 		const initialFilterMode = this.settingsManager.getTreeFilterMode();
 
 		if (tree.length === 0) {
-			this.showStatus("No entries in session");
+			this.showStatus(t("no_entries_in_session"));
 			return;
 		}
 
@@ -5767,7 +5789,7 @@ export class InteractiveMode {
 					// Selecting the current leaf is a no-op (already there)
 					if (entryId === this.sessionManager.getLeafId()) {
 						done();
-						this.showStatus("Already at this point");
+						this.showStatus(t("already_at_this_point"));
 						return;
 					}
 
@@ -5781,10 +5803,10 @@ export class InteractiveMode {
 					// Check if we should skip the prompt (user preference to always default to no summary)
 					if (!this.settingsManager.getBranchSummarySkipPrompt()) {
 						while (true) {
-							const summaryChoice = await this.showExtensionSelector("Summarize branch?", [
-								"No summary",
-								"Summarize",
-								"Summarize with custom prompt",
+							const summaryChoice = await this.showExtensionSelector(t("summarize_branch"), [
+								t("no_summary"),
+								t("summarize_label"),
+								t("summarize_with_custom_prompt"),
 							]);
 
 							if (summaryChoice === undefined) {
@@ -5793,10 +5815,10 @@ export class InteractiveMode {
 								return;
 							}
 
-							wantsSummary = summaryChoice !== "No summary";
+							wantsSummary = summaryChoice !== t("no_summary");
 
-							if (summaryChoice === "Summarize with custom prompt") {
-								customInstructions = await this.showExtensionEditor("Custom summarization instructions");
+							if (summaryChoice === t("summarize_with_custom_prompt")) {
+								customInstructions = await this.showExtensionEditor(t("custom_summarization_instructions"));
 								if (customInstructions === undefined) {
 									// User cancelled - loop back to summary selector
 									continue;
@@ -5844,12 +5866,12 @@ export class InteractiveMode {
 
 						if (result.aborted) {
 							// Summarization aborted - re-show tree selector with same selection
-							this.showStatus("Branch summarization cancelled");
+							this.showStatus(t("branch_summarization_cancelled"));
 							this.showTreeSelector(entryId);
 							return;
 						}
 						if (result.cancelled) {
-							this.showStatus("Navigation cancelled");
+							this.showStatus(t("navigation_cancelled"));
 							return;
 						}
 
@@ -5859,7 +5881,7 @@ export class InteractiveMode {
 						if (result.editorText && !this.editor.getText().trim()) {
 							this.editor.setText(result.editorText);
 						}
-						this.showStatus("Navigated to selected point");
+						this.showStatus(t("navigated_to_selected_point"));
 						void this.flushCompactionQueue({ willRetry: false });
 					} catch (error) {
 						this.showError(error instanceof Error ? error.message : String(error));
@@ -5883,12 +5905,12 @@ export class InteractiveMode {
 			);
 			selector.onCopy = async (text) => {
 				if (!text) {
-					this.showError("Selected entry has no text to copy");
+					this.showError(t("selected_entry_no_text_to_copy"));
 					return;
 				}
 				try {
 					await copyToClipboard(text);
-					this.showStatus("Copied selected message to clipboard");
+					this.showStatus(t("copied_selected_message"));
 				} catch (error) {
 					this.showError(error instanceof Error ? error.message : String(error));
 				}
@@ -5953,7 +5975,7 @@ export class InteractiveMode {
 			if (result.cancelled) {
 				return result;
 			}
-			this.showStatus("Resumed session");
+			this.showStatus(t("resumed_session"));
 			return result;
 		} catch (error: unknown) {
 			if (error instanceof MissingSessionCwdError) {
@@ -5964,17 +5986,17 @@ export class InteractiveMode {
 							withSession: options?.withSession,
 							projectTrustContextFactory: (cwd) => this.createProjectTrustContext(cwd),
 						});
-						if (!result.cancelled) this.showStatus(`Resumed session in ${error.issue.fallbackCwd}`);
+						if (!result.cancelled) this.showStatus(t("resumed_session_in", { cwd: error.issue.fallbackCwd }));
 						return result;
 					}
 					case "fork":
 						return this.switchToForkedSession(sessionPath, error.issue.fallbackCwd, options);
 					case undefined:
-						this.showStatus("Resume cancelled");
+						this.showStatus(t("resume_cancelled"));
 						return { cancelled: true };
 				}
 			}
-			return this.handleFatalRuntimeError("Failed to resume session", error);
+			return this.handleFatalRuntimeError(t("failed_to_resume_session"), error);
 		}
 	}
 
@@ -5995,7 +6017,7 @@ export class InteractiveMode {
 			fs.rmSync(forkPath, { force: true });
 			return result;
 		}
-		this.showStatus(`Forked into new session ${fork.getSessionId()} in ${cwd}`);
+		this.showStatus(t("forked_into_session", { id: fork.getSessionId(), cwd }));
 		return result;
 	}
 
@@ -6094,8 +6116,8 @@ export class InteractiveMode {
 		const oauthProvider = providerOptions?.find((provider) => provider.authType === "oauth");
 		const oauthLoginLabel =
 			oauthProvider?.method && "loginLabel" in oauthProvider.method ? oauthProvider.method.loginLabel : undefined;
-		const subscriptionLabel = oauthLoginLabel ?? "Sign in with an account";
-		const apiKeyLabel = "Sign in with an API key";
+		const subscriptionLabel = oauthLoginLabel ?? t("sign_in_with_account");
+		const apiKeyLabel = t("sign_in_api_key");
 		const availableAuthTypes = providerOptions
 			? new Set(providerOptions.map((provider) => provider.authType))
 			: new Set<AuthSelectorProvider["authType"]>(["oauth", "api_key"]);
@@ -6109,7 +6131,7 @@ export class InteractiveMode {
 		if (radiusLabel) options.push(radiusLabel);
 
 		if (options.length === 0) {
-			this.showStatus("No login methods available.");
+			this.showStatus(t("no_login_methods_available"));
 			return;
 		}
 
@@ -6123,7 +6145,7 @@ export class InteractiveMode {
 
 		const title = providerOptions?.[0]
 			? `Select authentication method for ${providerOptions[0].name}:`
-			: "Select authentication method:";
+			: t("select_auth_method");
 		this.showSelector((done) => {
 			const onSelect = (option: string) => {
 				done();
@@ -6165,10 +6187,10 @@ export class InteractiveMode {
 		if (providerOptions.length === 0) {
 			const message =
 				authType === "oauth"
-					? "No account providers available."
+					? t("no_account_providers")
 					: authType === "api_key"
-						? "No API key providers available."
-						: "No login providers available.";
+						? t("no_api_key_providers")
+						: t("no_login_providers");
 			this.showStatus(message);
 			return;
 		}
@@ -6216,13 +6238,11 @@ export class InteractiveMode {
 		try {
 			providerOptions = await this.getLogoutProviderOptions();
 		} catch (error) {
-			this.showError(`Could not read stored credentials: ${error instanceof Error ? error.message : String(error)}`);
+			this.showError(t("credentials_read_error", { error: error instanceof Error ? error.message : String(error) }));
 			return;
 		}
 		if (providerOptions.length === 0) {
-			this.showStatus(
-				"No stored credentials to remove. /logout only removes credentials saved by /login; environment variables and models.json config are unchanged.",
-			);
+			this.showStatus(t("no_stored_credentials"));
 			return;
 		}
 
@@ -6245,15 +6265,15 @@ export class InteractiveMode {
 						await this.updateAvailableProviderCount();
 						const message =
 							providerOption.authType === "oauth"
-								? `Logged out of ${providerOption.name}`
-								: `Removed stored API key for ${providerOption.name}. Environment variables and models.json config are unchanged.`;
+								? t("logged_out_of", { provider: providerOption.name })
+								: t("removed_stored_api_key", { provider: providerOption.name });
 						this.showStatus(message);
 					} catch (error: unknown) {
 						const message = error instanceof Error ? error.message : String(error);
 						this.showError(
 							error instanceof CredentialSynchronizationError
-								? `Credentials removed for ${providerOption.name}, but local model state could not be synchronized: ${message}`
-								: `Logout failed: ${message}`,
+								? t("logout_sync_failed", { provider: providerOption.name, error: message })
+								: t("logout_failed", { error: message }),
 						);
 					}
 				},
@@ -6274,7 +6294,10 @@ export class InteractiveMode {
 		authType: "oauth" | "api_key",
 		previousModel: Model<any> | undefined,
 	): Promise<void> {
-		const actionLabel = authType === "oauth" ? `Logged in to ${providerName}` : `Saved API key for ${providerName}`;
+		const actionLabel =
+			authType === "oauth"
+				? t("logged_in_to", { provider: providerName })
+				: t("saved_api_key_for", { provider: providerName });
 
 		const session = this.session;
 		// Dynamic catalogs may be empty until the first authenticated network refresh.
@@ -6294,9 +6317,9 @@ export class InteractiveMode {
 				if (providerId === "llama.cpp") {
 					selectionError = llamaCppPostLoginGuidance(actionLabel, providerModels.length);
 				} else if (!hasDefaultModelProvider(providerId)) {
-					selectionError = `${actionLabel}, but no default model is configured for provider "${providerId}". Use /model to select a model.`;
+					selectionError = t("no_default_model_configured", { action: actionLabel, provider: providerId });
 				} else if (providerModels.length === 0) {
-					selectionError = `${actionLabel}, but no models are available for that provider. Use /model to select a model.`;
+					selectionError = t("no_models_for_provider", { action: actionLabel });
 				} else {
 					const defaultModelId = defaultModelPerProvider[providerId];
 					// Radius catalogs vary by account; prefer balanced, then use catalog order.
@@ -6304,14 +6327,14 @@ export class InteractiveMode {
 						providerModels.find((model) => model.id === defaultModelId) ??
 						(providerId === "radius" ? providerModels[0] : undefined);
 					if (!selectedModel) {
-						selectionError = `${actionLabel}, but its default model "${defaultModelId}" is not available. Use /model to select a model.`;
+						selectionError = t("default_model_unavailable", { action: actionLabel, model: defaultModelId ?? "" });
 					} else {
 						try {
 							await this.session.setModel(selectedModel, { persist: true });
 						} catch (error: unknown) {
 							selectedModel = undefined;
 							const errorMessage = error instanceof Error ? error.message : String(error);
-							selectionError = `${actionLabel}, but selecting its default model failed: ${errorMessage}. Use /model to select a model.`;
+							selectionError = t("select_default_model_failed", { action: actionLabel, error: errorMessage });
 						}
 					}
 				}
@@ -6321,10 +6344,12 @@ export class InteractiveMode {
 			this.footer.invalidate();
 			this.updateEditorBorderColor();
 			if (selectedModel) {
-				this.showStatus(`${actionLabel}. Selected ${selectedModel.id}. Credentials saved to ${getAuthPath()}`);
+				this.showStatus(
+					t("credentials_saved_with_model", { action: actionLabel, model: selectedModel.id, path: getAuthPath() }),
+				);
 				void this.maybeWarnAboutAnthropicSubscriptionAuth(selectedModel);
 			} else {
-				this.showStatus(`${actionLabel}. Credentials saved to ${getAuthPath()}`);
+				this.showStatus(t("credentials_saved_to", { action: actionLabel, path: getAuthPath() }));
 				if (selectionError) {
 					this.showError(selectionError);
 				} else {
@@ -6333,7 +6358,7 @@ export class InteractiveMode {
 			}
 		};
 		if (deferSelection) {
-			this.showStatus(`${actionLabel}. Credentials saved to ${getAuthPath()}. Refreshing model catalog…`);
+			this.showStatus(t("credentials_saved_refreshing", { action: actionLabel, path: getAuthPath() }));
 		} else {
 			await finishAuthentication();
 		}
@@ -6344,9 +6369,9 @@ export class InteractiveMode {
 			.refresh({ providers: [providerId], signal: controller.signal })
 			.then(async (result) => {
 				if (result.aborted) {
-					this.showWarning(`${actionLabel}, but its model catalog refresh timed out; using cached models.`);
+					this.showWarning(t("catalog_refresh_timeout", { action: actionLabel }));
 				} else if (result.errors.size > 0) {
-					this.showWarning(`${actionLabel}, but its model catalog could not be refreshed; using cached models.`);
+					this.showWarning(t("catalog_refresh_failed", { action: actionLabel }));
 				}
 				// Do not replace a model or session selected while the refresh was running.
 				if (deferSelection && this.session === session && session.model === previousModel) {
@@ -6358,7 +6383,10 @@ export class InteractiveMode {
 			})
 			.catch((error: unknown) => {
 				this.showWarning(
-					`${actionLabel}, but its model catalog could not be refreshed: ${error instanceof Error ? error.message : String(error)}`,
+					t("catalog_refresh_error", {
+						action: actionLabel,
+						error: error instanceof Error ? error.message : String(error),
+					}),
 				);
 			})
 			.finally(() => clearTimeout(timeout));
@@ -6383,7 +6411,7 @@ export class InteractiveMode {
 			`${providerOption.name} setup`,
 		);
 		dialog.showInfo(
-			`${providerOption.method?.name ?? "Authentication"} is configured outside ${APP_NAME}.`,
+			`${providerOption.method?.name ?? t("authentication")} is configured outside ${APP_NAME}.`,
 			[],
 			true,
 		);
@@ -6408,8 +6436,8 @@ export class InteractiveMode {
 
 		if (providerId === "amazon-bedrock") {
 			dialog.showDetails([
-				theme.fg("text", "You can also use an AWS profile, IAM keys, or role-based credentials."),
-				theme.fg("muted", "See:"),
+				theme.fg("text", t("aws_credentials_hint")),
+				theme.fg("muted", t("see_colon")),
 				theme.fg("accent", `  ${path.join(getDocsPath(), "providers.md")}`),
 			]);
 		}
@@ -6434,13 +6462,11 @@ export class InteractiveMode {
 			restoreEditor();
 			const errorMsg = error instanceof Error ? error.message : String(error);
 			if (error instanceof CredentialSynchronizationError) {
-				this.showError(
-					`Saved API key for ${providerName}, but local model state could not be synchronized: ${errorMsg}`,
-				);
-			} else if (errorMsg === "Login cancelled") {
+				this.showError(t("save_api_key_sync_failed", { provider: providerName, error: errorMsg }));
+			} else if (errorMsg === t("login_cancelled")) {
 				onBack?.();
 			} else {
-				this.showError(`Failed to save API key for ${providerName}: ${errorMsg}`);
+				this.showError(t("save_api_key_failed", { provider: providerName, error: errorMsg }));
 			}
 		}
 	}
@@ -6465,11 +6491,11 @@ export class InteractiveMode {
 					restoreDialog();
 					const id = prompt.options.find((option) => option.label === optionLabel)?.id;
 					if (id) resolve(id);
-					else reject(new Error("Login cancelled"));
+					else reject(new Error(t("login_cancelled")));
 				},
 				() => {
 					restoreDialog();
-					reject(new Error("Login cancelled"));
+					reject(new Error(t("login_cancelled")));
 				},
 				{ description: providerId === RADIUS_PROVIDER_ID ? RADIUS_LOGIN_INTRO : undefined },
 			);
@@ -6490,11 +6516,11 @@ export class InteractiveMode {
 			response = dialog.showPrompt(prompt.message, prompt.placeholder);
 		}
 		if (!prompt.signal) return response;
-		if (prompt.signal.aborted) throw new Error("Login cancelled");
+		if (prompt.signal.aborted) throw new Error(t("login_cancelled"));
 		const signal = prompt.signal;
 		let onAbort: (() => void) | undefined;
 		const aborted = new Promise<string>((_resolve, reject) => {
-			onAbort = () => reject(new Error("Login cancelled"));
+			onAbort = () => reject(new Error(t("login_cancelled")));
 			signal.addEventListener("abort", onAbort, { once: true });
 		});
 		try {
@@ -6509,7 +6535,7 @@ export class InteractiveMode {
 			dialog.showAuth(event.url, event.instructions);
 		} else if (event.type === "device_code") {
 			dialog.showDeviceCode(event);
-			dialog.showWaiting("Waiting for authentication...");
+			dialog.showWaiting(t("waiting_auth"));
 		} else if (event.type === "info") {
 			dialog.showInfo(event.message, event.links);
 		} else {
@@ -6564,13 +6590,11 @@ export class InteractiveMode {
 			restoreEditor();
 			const errorMsg = error instanceof Error ? error.message : String(error);
 			if (error instanceof CredentialSynchronizationError) {
-				this.showError(
-					`Logged in to ${providerName}, but local model state could not be synchronized: ${errorMsg}`,
-				);
-			} else if (errorMsg === "Login cancelled") {
+				this.showError(t("login_sync_failed", { provider: providerName, error: errorMsg }));
+			} else if (errorMsg === t("login_cancelled")) {
 				onBack?.();
 			} else {
-				this.showError(`Failed to login to ${providerName}: ${errorMsg}`);
+				this.showError(t("login_failed", { provider: providerName, error: errorMsg }));
 			}
 		}
 	}
@@ -6586,16 +6610,19 @@ export class InteractiveMode {
 
 		this.showSelector((done) => {
 			const selector = new ExtensionSelectorComponent(
-				`Configure ${providerName} MCP in ${mcpPath}?`,
-				["Yes", "No"],
+				t("configure_mcp", { provider: providerName, path: mcpPath }),
+				[t("yes_label"), t("no_label")],
 				(option) => {
 					done();
-					if (option !== "Yes") return;
+					if (option !== t("yes_label")) return;
 					try {
 						addMcpServerConfig(mcpPath, name, config);
 					} catch (error: unknown) {
 						this.showError(
-							`Could not update ${mcpPath}: ${error instanceof Error ? error.message : String(error)}`,
+							t("mcp_config_update_failed", {
+								path: mcpPath,
+								error: error instanceof Error ? error.message : String(error),
+							}),
 						);
 						return;
 					}
@@ -6617,11 +6644,11 @@ export class InteractiveMode {
 
 	private async handleReloadCommand(): Promise<void> {
 		if (this.session.isStreaming) {
-			this.showWarning("Wait for the current response to finish before reloading.");
+			this.showWarning(t("wait_response_before_reload"));
 			return;
 		}
 		if (this.session.isCompacting) {
-			this.showWarning("Wait for compaction to finish before reloading.");
+			this.showWarning(t("wait_compaction_before_reload"));
 			return;
 		}
 
@@ -6631,13 +6658,7 @@ export class InteractiveMode {
 		const borderColor = (s: string) => theme.fg("border", s);
 		reloadBox.addChild(new DynamicBorder(borderColor));
 		reloadBox.addChild(new Spacer(1));
-		reloadBox.addChild(
-			new ThemedText(
-				() => theme.fg("muted", "Reloading keybindings, extensions, skills, prompts, themes, and context files..."),
-				1,
-				0,
-			),
-		);
+		reloadBox.addChild(new ThemedText(() => theme.fg("muted", t("reloading_resources")), 1, 0));
 		reloadBox.addChild(new Spacer(1));
 		reloadBox.addChild(new DynamicBorder(borderColor));
 
@@ -6688,20 +6709,16 @@ export class InteractiveMode {
 			const savedImplicitProjectTrust = this.maybeSaveImplicitProjectTrustAfterReload();
 			const modelsJsonError = this.session.modelRuntime.getError();
 			if (modelsJsonError) {
-				this.showError(`models.json error: ${modelsJsonError}`);
+				this.showError(t("models_json_error", { error: modelsJsonError }));
 			}
-			this.showStatus(
-				savedImplicitProjectTrust
-					? "Reloaded keybindings, extensions, skills, prompts, themes, and context files; saved project trust"
-					: "Reloaded keybindings, extensions, skills, prompts, themes, and context files",
-			);
+			this.showStatus(savedImplicitProjectTrust ? t("reloaded_resources_saved_trust") : t("reloaded_resources"));
 			dismissReloadBox(this.editor as Component);
 			reloadBoxDismissed = true;
 		} catch (error) {
 			if (!reloadBoxDismissed) {
 				dismissReloadBox(previousEditor as Component);
 			}
-			this.showError(`Reload failed: ${error instanceof Error ? error.message : String(error)}`);
+			this.showError(t("reload_failed", { error: error instanceof Error ? error.message : String(error) }));
 		}
 	}
 
@@ -6711,15 +6728,15 @@ export class InteractiveMode {
 		try {
 			if (outputPath?.endsWith(".jsonl")) {
 				const filePath = this.session.exportToJsonl(outputPath);
-				this.showStatus(`Session exported to: ${filePath}`);
+				this.showStatus(t("session_exported_to", { path: filePath }));
 			} else {
 				const filePath = await this.session.exportToHtml(outputPath, {
 					themeName: theme.name,
 				});
-				this.showStatus(`Session exported to: ${filePath}`);
+				this.showStatus(t("session_exported_to", { path: filePath }));
 			}
 		} catch (error: unknown) {
-			this.showError(`Failed to export session: ${error instanceof Error ? error.message : "Unknown error"}`);
+			this.showError(t("export_failed", { error: error instanceof Error ? error.message : t("unknown_error") }));
 		}
 	}
 
@@ -6755,13 +6772,16 @@ export class InteractiveMode {
 	private async handleImportCommand(text: string): Promise<void> {
 		const inputPath = this.getPathCommandArgument(text, "/import");
 		if (!inputPath) {
-			this.showError("Usage: /import <path.jsonl>");
+			this.showError(t("usage_import"));
 			return;
 		}
 
-		const confirmed = await this.showExtensionConfirm("Import session", `Replace current session with ${inputPath}?`);
+		const confirmed = await this.showExtensionConfirm(
+			t("import_session"),
+			`Replace current session with ${inputPath}?`,
+		);
 		if (!confirmed) {
-			this.showStatus("Import cancelled");
+			this.showStatus(t("import_cancelled"));
 			return;
 		}
 
@@ -6769,33 +6789,35 @@ export class InteractiveMode {
 			this.clearStatusIndicator();
 			const result = await this.runtimeHost.importFromJsonl(inputPath);
 			if (result.cancelled) {
-				this.showStatus("Import cancelled");
+				this.showStatus(t("import_cancelled"));
 				return;
 			}
-			this.showStatus(`Session imported from: ${inputPath}`);
+			this.showStatus(t("session_imported_from", { path: inputPath }));
 		} catch (error: unknown) {
 			if (error instanceof MissingSessionCwdError) {
 				switch (await this.promptForMissingSessionCwd(error)) {
 					case "continue": {
 						const result = await this.runtimeHost.importFromJsonl(inputPath, error.issue.fallbackCwd);
-						this.showStatus(result.cancelled ? "Import cancelled" : `Session imported from: ${inputPath}`);
+						this.showStatus(
+							result.cancelled ? t("import_cancelled") : t("session_imported_from", { path: inputPath }),
+						);
 						return;
 					}
 					case "fork": {
 						const result = await this.switchToForkedSession(inputPath, error.issue.fallbackCwd);
-						if (result.cancelled) this.showStatus("Import cancelled");
+						if (result.cancelled) this.showStatus(t("import_cancelled"));
 						return;
 					}
 					case undefined:
-						this.showStatus("Import cancelled");
+						this.showStatus(t("import_cancelled"));
 						return;
 				}
 			}
 			if (error instanceof SessionImportFileNotFoundError) {
-				this.showError(`Failed to import session: ${error.message}`);
+				this.showError(t("import_failed", { error: error.message }));
 				return;
 			}
-			await this.handleFatalRuntimeError("Failed to import session", error);
+			await this.handleFatalRuntimeError(t("failed_to_import_session"), error);
 		}
 	}
 
@@ -6840,16 +6862,16 @@ export class InteractiveMode {
 
 		const text = this.session.getLastAssistantText();
 		if (!text) {
-			this.showError("No agent messages to copy yet.");
+			this.showError(t("no_agent_messages_to_copy"));
 			return;
 		}
 
 		try {
 			await copyToClipboard(text);
 			if (options.flashConfirmation && this.ui instanceof TuiAltScreen) {
-				this.ui.flash("Copied!");
+				this.ui.flash(t("copied"));
 			} else {
-				this.showStatus("Copied last agent message to clipboard");
+				this.showStatus(t("copied_last_agent_message"));
 			}
 		} catch (error) {
 			this.showError(error instanceof Error ? error.message : String(error));
@@ -6862,9 +6884,11 @@ export class InteractiveMode {
 			const currentName = this.sessionManager.getSessionName();
 			if (currentName) {
 				this.chatContainer.addChild(new Spacer(1));
-				this.chatContainer.addChild(new ThemedText(() => theme.fg("dim", `Session name: ${currentName}`), 1, 0));
+				this.chatContainer.addChild(
+					new ThemedText(() => theme.fg("dim", t("session_name_value", { name: currentName })), 1, 0),
+				);
 			} else {
-				this.showWarning("Usage: /name <name>");
+				this.showWarning(t("usage_name"));
 			}
 			this.ui.requestRender();
 			return;
@@ -6873,11 +6897,15 @@ export class InteractiveMode {
 		this.session.setSessionName(name);
 		const sessionName = this.sessionManager.getSessionName();
 		if (sessionName !== name) {
-			this.showWarning(`Session name was normalized from ${JSON.stringify(name)} to ${JSON.stringify(sessionName)}`);
+			this.showWarning(
+				t("session_name_normalized", { from: JSON.stringify(name), to: JSON.stringify(sessionName) }),
+			);
 		}
 		this.chatContainer.addChild(new Spacer(1));
 		const displayName = sessionName ?? name;
-		this.chatContainer.addChild(new ThemedText(() => theme.fg("dim", `Session name set: ${displayName}`), 1, 0));
+		this.chatContainer.addChild(
+			new ThemedText(() => theme.fg("dim", t("session_name_set", { name: displayName })), 1, 0),
+		);
 		this.ui.requestRender();
 	}
 
@@ -6898,47 +6926,47 @@ export class InteractiveMode {
 		const model = this.session.model;
 		const selectedModelKey = `${model?.provider}/${model?.id}`;
 		const renderInfo = (): string => {
-			let info = `${theme.bold("Session Info")}\n\n`;
+			let info = `${theme.bold(t("session_info"))}\n\n`;
 			if (sessionName) {
 				info += `${theme.fg("dim", "Name:")} ${sessionName}\n`;
 			}
-			info += `${theme.fg("dim", "File:")} ${stats.sessionFile ?? "In-memory"}\n`;
-			info += `${theme.fg("dim", "ID:")} ${stats.sessionId}\n\n`;
-			info += `${theme.bold("Messages")}\n`;
-			info += `${theme.fg("dim", "Total:")} ${stats.totalMessages}\n`;
-			info += `${theme.fg("dim", "User:")} ${stats.userMessages}\n`;
-			info += `${theme.fg("dim", "Assistant:")} ${stats.assistantMessages}\n`;
-			info += `${theme.fg("dim", "Tools:")} ${stats.toolCalls} calls, ${stats.toolResults} results\n\n`;
-			info += `${theme.bold("Tokens")}\n`;
+			info += `${theme.fg("dim", t("file_label"))} ${stats.sessionFile ?? t("in_memory")}\n`;
+			info += `${theme.fg("dim", t("id_label"))} ${stats.sessionId}\n\n`;
+			info += `${theme.bold(t("messages_label"))}\n`;
+			info += `${theme.fg("dim", t("total_label"))} ${stats.totalMessages}\n`;
+			info += `${theme.fg("dim", t("user_label"))} ${stats.userMessages}\n`;
+			info += `${theme.fg("dim", t("assistant_label"))} ${stats.assistantMessages}\n`;
+			info += `${theme.fg("dim", t("tools_label"))} ${stats.toolCalls} calls, ${stats.toolResults} results\n\n`;
+			info += `${theme.bold(t("tokens_label"))}\n`;
 			// "Input" is the full prompt volume. With cache activity, split it into
 			// cached (served from cache) vs uncached (everything else) - the only
 			// provider-independent split. Cache writes, where reported, are a detail
 			// of the uncached portion.
 			const { input, cacheRead, cacheWrite } = stats.tokens;
 			const promptTokens = input + cacheRead + cacheWrite;
-			info += `${theme.fg("dim", "Input:")} ${promptTokens.toLocaleString()}\n`;
+			info += `${theme.fg("dim", t("input_colon"))} ${promptTokens.toLocaleString()}\n`;
 			if (promptTokens > 0 && (cacheRead > 0 || cacheWrite > 0)) {
 				const hitRate = theme.fg("dim", `(${((cacheRead / promptTokens) * 100).toFixed(1)}%)`);
-				info += `  ${theme.fg("dim", "Cached:")} ${cacheRead.toLocaleString()} ${hitRate}\n`;
+				info += `  ${theme.fg("dim", t("cached_label"))} ${cacheRead.toLocaleString()} ${hitRate}\n`;
 				const written =
 					cacheWrite > 0 ? ` ${theme.fg("dim", `(${cacheWrite.toLocaleString()} written to cache)`)}` : "";
-				info += `  ${theme.fg("dim", "Uncached:")} ${(input + cacheWrite).toLocaleString()}${written}\n`;
+				info += `  ${theme.fg("dim", t("uncached_label"))} ${(input + cacheWrite).toLocaleString()}${written}\n`;
 			}
-			info += `${theme.fg("dim", "Output:")} ${stats.tokens.output.toLocaleString()}\n`;
-			info += `${theme.fg("dim", "Total:")} ${stats.tokens.total.toLocaleString()}\n`;
+			info += `${theme.fg("dim", t("output_label"))} ${stats.tokens.output.toLocaleString()}\n`;
+			info += `${theme.fg("dim", t("total_label"))} ${stats.tokens.total.toLocaleString()}\n`;
 
-			info += `\n${theme.bold("Cache Warming")}\n`;
-			info += `${theme.fg("dim", "Mode:")} ${cacheWarmingMode}\n`;
-			info += `${theme.fg("dim", "Status:")} ${cacheWarmingStatus ? formatCacheWarmingStatus(cacheWarmingStatus) : "Inactive (cache warming unavailable)"}\n`;
+			info += `\n${theme.bold(t("cache_warming"))}\n`;
+			info += `${theme.fg("dim", t("mode_label"))} ${cacheWarmingMode}\n`;
+			info += `${theme.fg("dim", t("status_label"))} ${cacheWarmingStatus ? formatCacheWarmingStatus(cacheWarmingStatus) : t("inactive_cache_warming")}\n`;
 			const decision = cacheWarmingStatus?.decision;
 			if (decision?.economicsAvailable) {
-				info += `${theme.fg("dim", "Cache miss penalty:")} $${decision.missCost.toFixed(3)}\n`;
-				info += `${theme.fg("dim", "Refresh cost:")} $${decision.warmCost.toFixed(3)}\n`;
+				info += `${theme.fg("dim", t("cache_miss_penalty"))} $${decision.missCost.toFixed(3)}\n`;
+				info += `${theme.fg("dim", t("refresh_cost"))} $${decision.warmCost.toFixed(3)}\n`;
 			}
 
 			if (stats.cost > 0 || cacheWaste.missedTokens > 0) {
-				info += `\n${theme.bold("Cost")}\n`;
-				info += `${theme.fg("dim", "Total:")} $${stats.cost.toFixed(3)}`;
+				info += `\n${theme.bold(t("cost_label"))}\n`;
+				info += `${theme.fg("dim", t("total_label"))} $${stats.cost.toFixed(3)}`;
 				// A single entry repeats the total, unless it names a model other than the selected one.
 				if (usageBreakdown.length > 1 || usageBreakdown[0]?.key !== selectedModelKey) {
 					for (const entry of usageBreakdown) {
@@ -6950,8 +6978,8 @@ export class InteractiveMode {
 					const detail = `${cacheWaste.missedTokens.toLocaleString()} tokens, ${missLabel}`;
 					info +=
 						cacheWaste.missedCost >= 0.0001
-							? `\n${theme.fg("dim", "Cache Re-billed:")} $${cacheWaste.missedCost.toFixed(3)} ${theme.fg("dim", `(${detail})`)}`
-							: `\n${theme.fg("dim", "Cache Re-billed:")} ${detail}`;
+							? `\n${theme.fg("dim", t("cache_rebilled"))} $${cacheWaste.missedCost.toFixed(3)} ${theme.fg("dim", `(${detail})`)}`
+							: `\n${theme.fg("dim", t("cache_rebilled"))} ${detail}`;
 				}
 			}
 			return info;
@@ -6972,11 +7000,11 @@ export class InteractiveMode {
 						.reverse()
 						.map((e) => normalizeChangelogLinks(e.content, e))
 						.join("\n\n")
-				: "No changelog entries found.";
+				: t("no_changelog_entries");
 
 		this.chatContainer.addChild(new Spacer(1));
 		this.chatContainer.addChild(new DynamicBorder());
-		this.chatContainer.addChild(new ThemedText(() => theme.bold(theme.fg("accent", "What's New")), 1, 0));
+		this.chatContainer.addChild(new ThemedText(() => theme.bold(theme.fg("accent", t("whats_new"))), 1, 0));
 		this.chatContainer.addChild(new Spacer(1));
 		this.chatContainer.addChild(this.createChangelogMarkdown(changelogMarkdown, 1, 1));
 		this.chatContainer.addChild(new DynamicBorder());
@@ -7041,52 +7069,55 @@ export class InteractiveMode {
 		const dequeue = this.getAppKeyDisplay("app.message.dequeue");
 		const pasteImage = this.getAppKeyDisplay("app.clipboard.pasteImage");
 
+		const keyColumn = t("hotkeys_column_key");
+		const actionColumn = t("hotkeys_column_action");
+		const newLineNote = process.platform === "win32" ? t("hotkeys_new_line_windows") : "";
 		let hotkeys = `
-**Navigation**
-| Key | Action |
+**${t("hotkeys_navigation")}**
+| ${keyColumn} | ${actionColumn} |
 |-----|--------|
-| \`${cursorUp}\` / \`${cursorDown}\` / \`${cursorLeft}\` / \`${cursorRight}\` | Move cursor / browse history |
-| \`${cursorWordLeft}\` / \`${cursorWordRight}\` | Move by word |
-| \`${cursorLineStart}\` | Start of line |
-| \`${cursorLineEnd}\` | End of line |
-| \`${jumpForward}\` | Jump forward to character |
-| \`${jumpBackward}\` | Jump backward to character |
-| \`${pageUp}\` / \`${pageDown}\` | Scroll by page |
+| \`${cursorUp}\` / \`${cursorDown}\` / \`${cursorLeft}\` / \`${cursorRight}\` | ${t("hotkeys_move_cursor")} |
+| \`${cursorWordLeft}\` / \`${cursorWordRight}\` | ${t("hotkeys_move_by_word")} |
+| \`${cursorLineStart}\` | ${t("hotkeys_line_start")} |
+| \`${cursorLineEnd}\` | ${t("hotkeys_line_end")} |
+| \`${jumpForward}\` | ${t("hotkeys_jump_forward")} |
+| \`${jumpBackward}\` | ${t("hotkeys_jump_backward")} |
+| \`${pageUp}\` / \`${pageDown}\` | ${t("hotkeys_scroll_page")} |
 
-**Editing**
-| Key | Action |
+**${t("hotkeys_editing")}**
+| ${keyColumn} | ${actionColumn} |
 |-----|--------|
-| \`${submit}\` | Send message |
-| \`${newLine}\` | New line${process.platform === "win32" ? " (Ctrl+Enter on Windows Terminal)" : ""} |
-| \`${deleteWordBackward}\` | Delete word backwards |
-| \`${deleteWordForward}\` | Delete word forwards |
-| \`${deleteToLineStart}\` | Delete to start of line |
-| \`${deleteToLineEnd}\` | Delete to end of line |
-| \`${yank}\` | Paste the most-recently-deleted text |
-| \`${yankPop}\` | Cycle through the deleted text after pasting |
-| \`${undo}\` | Undo |
+| \`${submit}\` | ${t("hotkeys_send_message")} |
+| \`${newLine}\` | ${t("hotkeys_new_line")}${newLineNote} |
+| \`${deleteWordBackward}\` | ${t("hotkeys_delete_word_backward")} |
+| \`${deleteWordForward}\` | ${t("hotkeys_delete_word_forward")} |
+| \`${deleteToLineStart}\` | ${t("hotkeys_delete_to_line_start")} |
+| \`${deleteToLineEnd}\` | ${t("hotkeys_delete_to_line_end")} |
+| \`${yank}\` | ${t("hotkeys_yank")} |
+| \`${yankPop}\` | ${t("hotkeys_yank_pop")} |
+| \`${undo}\` | ${t("hotkeys_undo")} |
 
-**Other**
-| Key | Action |
+**${t("hotkeys_other")}**
+| ${keyColumn} | ${actionColumn} |
 |-----|--------|
-| \`${tab}\` | Path completion / accept autocomplete |
-| \`${interrupt}\` | Cancel autocomplete / abort streaming |
-| \`${clear}\` | Clear editor (first) / exit (second) |
-| \`${exit}\` | Exit (when editor is empty) |
-| \`${suspend}\` | Suspend to background |
-| \`${cycleThinkingLevel}\` | Cycle thinking level |
-| \`${cycleModelForward}\` / \`${cycleModelBackward}\` | Cycle models |
-| \`${selectModel}\` | Open model selector |
-| \`${expandTools}\` | Toggle tool output expansion |
-| \`${toggleThinking}\` | Toggle thinking block visibility |
-| \`${externalEditor}\` | Edit message in external editor |
-| \`${copyMessage}\` | Copy selection or last assistant message |
-| \`${followUp}\` | Queue follow-up message |
-| \`${dequeue}\` | Restore queued messages |
-| \`${pasteImage}\` | Paste files on macOS, images, or text from clipboard |
-| \`/\` | Slash commands |
-| \`!\` | Run bash command |
-| \`!!\` | Run bash command (excluded from context) |
+| \`${tab}\` | ${t("hotkeys_completion")} |
+| \`${interrupt}\` | ${t("hotkeys_interrupt")} |
+| \`${clear}\` | ${t("hotkeys_clear")} |
+| \`${exit}\` | ${t("hotkeys_exit")} |
+| \`${suspend}\` | ${t("hotkeys_suspend")} |
+| \`${cycleThinkingLevel}\` | ${t("hotkeys_cycle_thinking")} |
+| \`${cycleModelForward}\` / \`${cycleModelBackward}\` | ${t("hotkeys_cycle_models")} |
+| \`${selectModel}\` | ${t("hotkeys_select_model")} |
+| \`${expandTools}\` | ${t("hotkeys_toggle_tools")} |
+| \`${toggleThinking}\` | ${t("hotkeys_toggle_thinking")} |
+| \`${externalEditor}\` | ${t("hotkeys_external_editor")} |
+| \`${copyMessage}\` | ${t("hotkeys_copy_message")} |
+| \`${followUp}\` | ${t("hotkeys_follow_up")} |
+| \`${dequeue}\` | ${t("hotkeys_dequeue")} |
+| \`${pasteImage}\` | ${t("hotkeys_paste_clipboard")} |
+| \`/\` | ${t("hotkeys_slash_commands")} |
+| \`!\` | ${t("hotkeys_run_bash")} |
+| \`!!\` | ${t("hotkeys_run_bash_excluded")} |
 `;
 
 		// Add extension-registered shortcuts
@@ -7094,8 +7125,8 @@ export class InteractiveMode {
 		const shortcuts = extensionRunner.getShortcuts(this.keybindings.getEffectiveConfig());
 		if (shortcuts.size > 0) {
 			hotkeys += `
-**Extensions**
-| Key | Action |
+**${t("hotkeys_extensions")}**
+| ${keyColumn} | ${actionColumn} |
 |-----|--------|
 `;
 			for (const [key, shortcut] of shortcuts) {
@@ -7107,7 +7138,7 @@ export class InteractiveMode {
 
 		this.chatContainer.addChild(new Spacer(1));
 		this.chatContainer.addChild(new DynamicBorder());
-		this.chatContainer.addChild(new ThemedText(() => theme.bold(theme.fg("accent", "Keyboard Shortcuts")), 1, 0));
+		this.chatContainer.addChild(new ThemedText(() => theme.bold(theme.fg("accent", t("keyboard_shortcuts"))), 1, 0));
 		this.chatContainer.addChild(new Spacer(1));
 		this.chatContainer.addChild(new Markdown(hotkeys.trim(), 1, 1, this.getMarkdownThemeWithSettings()));
 		this.chatContainer.addChild(new DynamicBorder());
@@ -7125,7 +7156,7 @@ export class InteractiveMode {
 			this.chatContainer.addChild(new ThemedText(() => theme.fg("accent", "✓ New session started"), 1, 1));
 			this.ui.requestRender();
 		} catch (error: unknown) {
-			await this.handleFatalRuntimeError("Failed to create session", error);
+			await this.handleFatalRuntimeError(t("failed_to_create_session"), error);
 		}
 	}
 
@@ -7263,7 +7294,9 @@ export class InteractiveMode {
 			if (this.bashComponent) {
 				this.bashComponent.setComplete(undefined, false);
 			}
-			this.showError(`Bash command failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+			this.showError(
+				t("bash_command_failed", { error: error instanceof Error ? error.message : t("unknown_error") }),
+			);
 		}
 
 		this.bashComponent = undefined;

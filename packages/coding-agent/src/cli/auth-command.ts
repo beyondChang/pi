@@ -1,5 +1,6 @@
 import type { AuthResult } from "@earendil-works/pi-ai";
 import { APP_NAME } from "../config.ts";
+import { t } from "../i18n/messages-ui.ts";
 import type { Args } from "./args.ts";
 
 export type AuthCommandKind = "check" | "api_key" | "bearer_token";
@@ -127,16 +128,16 @@ export function validateAuthCommandArgs(args: Args, kind: AuthCommandKind): { pr
 		throw new AuthCommandError(`Unknown option --${option} for "${getAuthCommandName(kind)}".`);
 	}
 	if (args.apiKey !== undefined || args.messages.length > 0 || args.fileArgs.length > 0) {
-		throw new AuthCommandError("Auth commands only accept --provider and --model");
+		throw new AuthCommandError(t("auth_commands_only_accept_provider_model"));
 	}
 	if (kind === "check") {
 		if (!provider && !model) {
-			throw new AuthCommandError("Auth checks require --provider <provider> or --model <model>");
+			throw new AuthCommandError(t("auth_checks_require_provider"));
 		}
 		return { provider, model };
 	}
 	if (!provider && !model) {
-		throw new AuthCommandError("Credential printing requires --provider <provider> or --model <model>");
+		throw new AuthCommandError(t("credential_print_requires_provider_model"));
 	}
 	return { provider, model };
 }

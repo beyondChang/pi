@@ -2,6 +2,7 @@ import chalk from "chalk";
 import type { ProjectTrustContext } from "../core/extensions/types.ts";
 import type { AppMode } from "../core/project-trust.ts";
 import type { SettingsManager } from "../core/settings-manager.ts";
+import { t } from "../i18n/messages-ui.ts";
 import { showStartupInput, showStartupSelector } from "./startup-ui.ts";
 
 export function createProjectTrustContext(options: {
@@ -37,8 +38,8 @@ export function createProjectTrustContext(options: {
 				}
 				return (
 					(await showStartupSelector(options.settingsManager, `${title}\n${message}`, [
-						{ label: "Yes", value: true },
-						{ label: "No", value: false },
+						{ label: t("yes_label"), value: true },
+						{ label: t("no_label"), value: false },
 					])) ?? false
 				);
 			},

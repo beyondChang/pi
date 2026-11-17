@@ -66,6 +66,7 @@ import { printTimings, resetTimings, time } from "./core/timings.ts";
 import { hasTrustRequiringProjectResources, ProjectTrustStore } from "./core/trust-manager.ts";
 import { builtInExtensions } from "./extensions/index.ts";
 import { loadMcpCommand } from "./extensions/mcp/cli.lazy.ts";
+import { t } from "./i18n/messages-ui.ts";
 import { runMigrations, showDeprecationWarnings } from "./migrations.ts";
 import { InteractiveMode, runPrintMode, runRpcMode } from "./modes/index.ts";
 import { initTheme, setThemeJsonValidator, stopThemeWatcher } from "./modes/interactive/theme/theme.ts";
@@ -73,8 +74,6 @@ import { validateThemeJson } from "./modes/interactive/theme/theme-schema.ts";
 import { cleanupManagedInstall, handleConfigCommand, handlePackageCommand } from "./package-manager-cli.ts";
 import { isLocalPath, normalizePath, resolvePath } from "./utils/paths.ts";
 import { cleanupWindowsSelfUpdateQuarantine } from "./utils/windows-self-update.ts";
-
-const EXTENSION_LOAD_FAILURE_HINT = `Hint: Start without extensions using "${APP_NAME} -ne".`;
 
 /**
  * Read all content from piped stdin.
@@ -187,7 +186,7 @@ async function runAuthCommand(args: string[]): Promise<boolean> {
 	try {
 		command = parseAuthCommand(args);
 	} catch (error) {
-		const message = error instanceof AuthCommandError ? error.message : "Failed to parse auth command";
+		const message = error instanceof AuthCommandError ? error.message : t("cli_parsing_auth_failed");
 		console.error(chalk.red(`Error: ${message}`));
 		process.exitCode = 1;
 		return true;
@@ -196,9 +195,9 @@ async function runAuthCommand(args: string[]): Promise<boolean> {
 
 	const parsed = parseArgs(command.args);
 	if (parsed.unknownFlags.size > 0) {
-		const option = parsed.unknownFlags.keys().next().value;
-		console.error(chalk.red(`Unknown option --${option} for "${getAuthCommandName(command.kind)}".`));
-		console.error(chalk.dim(`Use "${APP_NAME} --help" or "${getAuthCommandUsage(command.kind)}".`));
+		const option = parsed.unknownFlags.keys().next().value ?? "";
+		console.error(chalk.red(t("cli_unknown_option", { option, command: getAuthCommandName(command.kind) })));
+		console.error(chalk.dim(t("cli_help_hint", { app: APP_NAME, usage: getAuthCommandUsage(command.kind) })));
 		process.exitCode = 1;
 		return true;
 	}
@@ -248,7 +247,7 @@ async function runAuthCommand(args: string[]): Promise<boolean> {
 		process.stdout.write(`${output}\n`);
 		process.exitCode = result.status === "ready" ? 0 : result.status === "not_ready" ? 1 : 2;
 	} catch (error) {
-		const message = error instanceof AuthCommandError ? error.message : "Failed to resolve credential";
+		const message = error instanceof AuthCommandError ? error.message : t("cli_resolve_credential_failed");
 		console.error(chalk.red(`Error: ${message}`));
 		process.exitCode = command.kind === "check" ? 2 : 1;
 	}
@@ -369,7 +368,7 @@ function validateSessionIdFlags(parsed: Args): void {
 	].filter((flag): flag is string => flag !== undefined);
 
 	if (conflictingFlags.length > 0) {
-		console.error(chalk.red(`Error: --session-id cannot be combined with ${conflictingFlags.join(", ")}`));
+		console.error(chalk.red(t("cli_session_id_conflict", { flags: conflictingFlags.join(", ") })));
 		process.exit(1);
 	}
 
@@ -416,7 +415,7 @@ export async function createSessionManager(
 		if (parsed.sessionId) {
 			const existingTarget = findLocalSessionByExactId(parsed.sessionId, cwd, sessionDir);
 			if (existingTarget) {
-				console.error(chalk.red(`Session already exists with id '${parsed.sessionId}'`));
+				console.error(chalk.red(t("cli_session_already_exists", { id: parsed.sessionId })));
 				process.exit(1);
 			}
 		}
@@ -430,7 +429,7 @@ export async function createSessionManager(
 				return forkSessionOrExit(resolved.path, cwd, sessionDir, parsed.sessionId);
 
 			case "not_found":
-				console.error(chalk.red(`No session found matching '${resolved.arg}'`));
+				console.error(chalk.red(t("cli_unknown_session", { arg: resolved.arg })));
 				process.exit(1);
 		}
 	}
@@ -444,17 +443,17 @@ export async function createSessionManager(
 				return openSessionOrExit(resolved.path, sessionDir);
 
 			case "global": {
-				console.log(chalk.yellow(`Session found in different project: ${resolved.cwd}`));
-				const shouldFork = await promptConfirm("Fork this session into current directory?");
+				console.log(chalk.yellow(t("cli_session_in_other_project", { cwd: resolved.cwd })));
+				const shouldFork = await promptConfirm(t("cli_fork_into_current"));
 				if (!shouldFork) {
-					console.log(chalk.dim("Aborted."));
+					console.log(chalk.dim(t("cli_aborted")));
 					process.exit(0);
 				}
 				return forkSessionOrExit(resolved.path, cwd, sessionDir);
 			}
 
 			case "not_found":
-				console.error(chalk.red(`No session found matching '${resolved.arg}'`));
+				console.error(chalk.red(t("cli_unknown_session", { arg: resolved.arg })));
 				process.exit(1);
 		}
 	}
@@ -467,7 +466,7 @@ export async function createSessionManager(
 				settingsManager,
 			);
 			if (!selectedPath) {
-				console.log(chalk.dim("No session selected"));
+				console.log(chalk.dim(t("cli_no_session_selected")));
 				process.exit(0);
 			}
 			return SessionManager.open(selectedPath, sessionDir);
@@ -485,11 +484,7 @@ export async function createSessionManager(
 		if (existingSession) {
 			return SessionManager.open(existingSession.path, sessionDir);
 		}
-		console.error(
-			chalk.yellow(
-				`Warning: No project session found with id '${parsed.sessionId}'; creating a new session with that id.`,
-			),
-		);
+		console.error(chalk.yellow(t("cli_session_id_new_warning", { id: parsed.sessionId })));
 	}
 
 	return SessionManager.create(cwd, sessionDir, { id: parsed.sessionId });
@@ -633,11 +628,7 @@ export async function main(args: string[], options?: MainOptions) {
 		cwd = process.cwd();
 	} catch (error) {
 		if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
-		console.error(
-			chalk.red(
-				"Error: The current working directory no longer exists. Change to an existing directory and try again.",
-			),
-		);
+		console.error(chalk.red(t("cli_cwd_missing")));
 		process.exit(1);
 	}
 	const agentDir = getAgentDir();
@@ -691,11 +682,11 @@ export async function main(args: string[], options?: MainOptions) {
 			const outputPath = parsed.messages.length > 0 ? parsed.messages[0] : undefined;
 			result = await exportFromFile(parsed.export, outputPath);
 		} catch (error: unknown) {
-			const message = error instanceof Error ? error.message : "Failed to export session";
+			const message = error instanceof Error ? error.message : t("export_failed", { error: "unknown" });
 			console.error(chalk.red(`Error: ${message}`));
 			process.exit(1);
 		}
-		console.log(`Exported to: ${result}`);
+		console.log(t("cli_exported_to", { path: result }));
 		process.exit(0);
 	}
 
@@ -706,7 +697,7 @@ export async function main(args: string[], options?: MainOptions) {
 	}
 
 	if (parsed.mode === "rpc" && parsed.fileArgs.length > 0) {
-		console.error(chalk.red("Error: @file arguments are not supported in RPC mode"));
+		console.error(chalk.red(t("cli_rpc_no_file_args")));
 		process.exit(1);
 	}
 
@@ -770,7 +761,7 @@ export async function main(args: string[], options?: MainOptions) {
 	if (parsed.name !== undefined) {
 		const name = normalizeSessionName(parsed.name);
 		if (name === undefined) {
-			console.error(chalk.red("Error: --name requires a non-empty value"));
+			console.error(chalk.red(t("cli_name_non_empty")));
 			process.exit(1);
 		}
 		sessionManager.appendSessionInfo(name);
@@ -983,7 +974,7 @@ export async function main(args: string[], options?: MainOptions) {
 	}
 	if (hasRuntimeErrors) {
 		if (runtime.diagnostics.some((diagnostic) => diagnostic.message.includes("Failed to load extension"))) {
-			console.error(chalk.yellow(EXTENSION_LOAD_FAILURE_HINT));
+			console.error(chalk.yellow(t("cli_extension_load_hint", { app: APP_NAME })));
 		}
 		process.exit(1);
 	}
@@ -996,7 +987,7 @@ export async function main(args: string[], options?: MainOptions) {
 
 	const startupBenchmark = isTruthyEnvFlag(process.env.PI_STARTUP_BENCHMARK);
 	if (startupBenchmark && appMode !== "interactive") {
-		console.error(chalk.red("Error: PI_STARTUP_BENCHMARK only supports interactive mode"));
+		console.error(chalk.red(t("cli_benchmark_interactive_only")));
 		process.exit(1);
 	}
 

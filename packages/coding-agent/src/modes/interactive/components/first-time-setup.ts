@@ -1,5 +1,6 @@
 import { Container, getKeybindings, Spacer, Text } from "@earendil-works/pi-tui";
 import { APP_NAME } from "../../../config.ts";
+import { t } from "../../../i18n/messages-ui.ts";
 import { SYSTEM_THEME_NAME } from "../theme/system-theme.ts";
 import { theme } from "../theme/theme.ts";
 import { DynamicBorder } from "./dynamic-border.ts";
@@ -17,14 +18,14 @@ export interface FirstTimeSetupOptions {
 }
 
 const THEME_OPTIONS: Array<{ value: string; label: string }> = [
-	{ value: SYSTEM_THEME_NAME, label: "System (matches your terminal colors)" },
-	{ value: "dark", label: "Dark" },
-	{ value: "light", label: "Light" },
+	{ value: SYSTEM_THEME_NAME, label: t("setup_system_theme_label") },
+	{ value: "dark", label: t("setup_dark_theme_label") },
+	{ value: "light", label: t("setup_light_theme_label") },
 ];
 
 const ANALYTICS_OPTIONS: Array<{ value: boolean; label: string }> = [
-	{ value: true, label: "Share anonymous usage data" },
-	{ value: false, label: "Don't share" },
+	{ value: true, label: t("setup_share_analytics_label") },
+	{ value: false, label: t("setup_dont_share_label") },
 ];
 
 const SETUP_LOGO_LINES = ["██████", "██  ██", "████  ██", "██    ██"];
@@ -56,30 +57,19 @@ export class FirstTimeSetupComponent extends Container {
 		this.addChild(new Spacer(1));
 		this.addChild(new Text(theme.fg("accent", SETUP_LOGO_LINES.join("\n")), 1, 0));
 		this.addChild(new Spacer(1));
-		this.addChild(
-			new Text(theme.fg("accent", theme.bold(`Welcome to ${APP_NAME}, the minimal coding agent.`)), 1, 0),
-		);
+		this.addChild(new Text(theme.fg("accent", theme.bold(t("setup_welcome", { app: APP_NAME }))), 1, 0));
 		this.addChild(new Spacer(1));
 
 		if (this.step === "theme") {
-			this.addChild(new Text(theme.fg("text", "Pick a theme."), 1, 0));
+			this.addChild(new Text(theme.fg("text", t("setup_pick_theme")), 1, 0));
 			this.addChild(new Spacer(1));
 			this.addOptionList(
 				THEME_OPTIONS.map((option) => option.label),
 				this.themeIndex,
 			);
 		} else {
-			this.addChild(new Text(theme.fg("text", "Opt-in to anonymous usage data sharing?"), 1, 0));
-			this.addChild(
-				new Text(
-					theme.fg(
-						"muted",
-						"Opting in stores a tracking identifier in settings.json and enables anonymous\nusage analytics. This helps us to better debug, reproduce, and resolve issues\nand bugs within Pi. You can observe what is shared using /privacy and make\nchanges anytime in settings.json.",
-					),
-					1,
-					0,
-				),
-			);
+			this.addChild(new Text(theme.fg("text", t("setup_opt_in_analytics")), 1, 0));
+			this.addChild(new Text(theme.fg("muted", t("setup_opt_in_analytics_detail")), 1, 0));
 			this.addChild(new Spacer(1));
 			this.addOptionList(
 				ANALYTICS_OPTIONS.map((option) => option.label),
@@ -90,11 +80,11 @@ export class FirstTimeSetupComponent extends Container {
 		this.addChild(new Spacer(1));
 		this.addChild(
 			new Text(
-				rawKeyHint("↑↓", "navigate") +
+				rawKeyHint("↑↓", t("setup_navigate")) +
 					"  " +
-					keyHint("tui.select.confirm", this.step === "theme" ? "continue" : "finish") +
+					keyHint("tui.select.confirm", this.step === "theme" ? t("setup_continue") : t("setup_finish")) +
 					"  " +
-					keyHint("tui.select.cancel", "skip setup"),
+					keyHint("tui.select.cancel", t("setup_skip")),
 				1,
 				0,
 			),

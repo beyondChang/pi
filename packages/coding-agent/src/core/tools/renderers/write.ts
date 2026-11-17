@@ -7,6 +7,7 @@
  */
 
 import { Container, Text } from "@earendil-works/pi-tui";
+import { t } from "../../../i18n/messages-ui.ts";
 import { keyHint } from "../../../modes/interactive/components/keybinding-hints.ts";
 import {
 	CodeHighlighter,
@@ -132,7 +133,7 @@ function formatWriteCall(
 		const remaining = lines.length - maxLines;
 		text += `\n\n${displayLines.map((line) => (lang ? line : theme.fg("toolOutput", replaceTabs(line)))).join("\n")}`;
 		if (remaining > 0) {
-			text += `${theme.fg("muted", `\n... (${remaining} more lines, ${totalLines} total,`)} ${keyHint("app.tools.expand", "to expand")}${theme.fg("muted", ")")}`;
+			text += `${theme.fg("muted", `\n... (${remaining} more lines, ${totalLines} total,`)} ${keyHint("app.tools.expand", t("hint_to_expand"))}${theme.fg("muted", ")")}`;
 		}
 	}
 

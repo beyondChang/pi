@@ -10,6 +10,7 @@
 import { Container, Spacer, Text } from "@earendil-works/pi-tui";
 import type { ToolDefinition } from "../../core/extensions/types.ts";
 import { getTextOutput, replaceTabs, startToolTimer, str, toolTimerText } from "../../core/tools/render-utils.ts";
+import { t } from "../../i18n/messages-ui.ts";
 import { keyHint } from "../../modes/interactive/components/keybinding-hints.ts";
 import { VisualLinePreview } from "../../modes/interactive/components/visual-truncate.ts";
 import { CodeHighlighter, type Theme } from "../../modes/interactive/theme/theme.ts";
@@ -28,7 +29,7 @@ interface CodemodeRenderState {
 }
 
 function expandHint(theme: Theme, hidden: number, noun: string): string {
-	return `${theme.fg("muted", `... (${hidden} more ${noun},`)} ${keyHint("app.tools.expand", "to expand")}${theme.fg("muted", ")")}`;
+	return `${theme.fg("muted", `... (${hidden} more ${noun},`)} ${keyHint("app.tools.expand", t("hint_to_expand"))}${theme.fg("muted", ")")}`;
 }
 
 function formatDuration(ms: number | undefined): string {
@@ -113,7 +114,7 @@ export const codemodeRenderers: Pick<
 			const lines = shown.map((call) => formatCall(call, theme, options.expanded));
 			if (shown.length < calls.length) {
 				lines.unshift(
-					`${theme.fg("muted", `... (${calls.length - shown.length} earlier calls,`)} ${keyHint("app.tools.expand", "to expand")}${theme.fg("muted", ")")}`,
+					`${theme.fg("muted", `... (${calls.length - shown.length} earlier calls,`)} ${keyHint("app.tools.expand", t("hint_to_expand"))}${theme.fg("muted", ")")}`,
 				);
 			}
 			// Collapsed rows hide earlier calls, so the total covers every call.

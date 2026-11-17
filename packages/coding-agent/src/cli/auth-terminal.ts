@@ -1,3 +1,4 @@
+import { t } from "../i18n/messages-ui.ts";
 import { openBrowser } from "../utils/open-browser.ts";
 import { questionTerminal } from "../utils/terminal-question.ts";
 
@@ -33,7 +34,7 @@ function readSecret(message: string, signal: AbortSignal, onInterrupt: () => voi
 	const stdin = process.stdin;
 	return new Promise((resolve, reject) => {
 		if (signal.aborted) {
-			reject(new Error("Login cancelled"));
+			reject(new Error(t("login_cancelled")));
 			return;
 		}
 		let value = "";
@@ -46,7 +47,7 @@ function readSecret(message: string, signal: AbortSignal, onInterrupt: () => voi
 		};
 		const onAbort = () => {
 			finish();
-			reject(new Error("Login cancelled"));
+			reject(new Error(t("login_cancelled")));
 		};
 		const onData = (data: Buffer) => {
 			const chunk = data.toString("utf8");

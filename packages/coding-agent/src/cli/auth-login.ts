@@ -6,6 +6,7 @@ import { findMatchingProviders } from "../core/provider-matching.ts";
 import { RADIUS_PROVIDER_ID } from "../core/radius.ts";
 import { planRadiusMcpServer } from "../core/radius-mcp.ts";
 import { addMcpServerConfig } from "../extensions/mcp/config.ts";
+import { t } from "../i18n/messages-ui.ts";
 import { displayUrl, webUrl } from "../utils/web-url.ts";
 
 import type { LoginTerminal } from "./auth-terminal.ts";
@@ -75,8 +76,8 @@ export async function runAuthLogin(args: string[], options: AuthLoginOptions): P
 		const message = error instanceof Error ? error.message : String(error);
 		if (error instanceof CredentialSynchronizationError) {
 			terminal.error(`Logged in to ${provider.name}, but local model state could not be synchronized: ${message}`);
-		} else if (signal.aborted || message === "Login cancelled") {
-			terminal.error("Login cancelled.");
+		} else if (signal.aborted || message === t("login_cancelled")) {
+			terminal.error(t("login_cancelled_period"));
 		} else {
 			terminal.error(`Failed to log in to ${provider.name}: ${message}`);
 		}
@@ -189,7 +190,7 @@ function createLoginInteraction(
 				if (target !== undefined && request.browser && event.openBrowserOnConfirm !== false) {
 					terminal.openUrl(target);
 				}
-				terminal.write("Waiting for authentication...");
+				terminal.write(t("waiting_auth"));
 			} else if (event.type === "info") {
 				terminal.write(event.message);
 				for (const link of event.links ?? []) {
@@ -269,7 +270,7 @@ function configureRadiusMcpServer(provider: Provider, options: AuthLoginOptions)
 	try {
 		const replaced = addMcpServerConfig(plan.mcpPath, plan.name, plan.config);
 		terminal.write(
-			`${replaced ? "Updated" : "Added"} MCP server "${plan.name}" in ${plan.mcpPath} to use the ${provider.name} login.`,
+			`${replaced ? t("updated") : t("added")} MCP server "${plan.name}" in ${plan.mcpPath} to use the ${provider.name} login.`,
 		);
 	} catch (error: unknown) {
 		terminal.error(`Could not update ${plan.mcpPath}: ${error instanceof Error ? error.message : String(error)}`);

@@ -1,4 +1,5 @@
 import { APP_NAME, CONFIG_DIR_NAME } from "../config.ts";
+import { t } from "../i18n/messages-ui.ts";
 import { emitProjectTrustEvent } from "./extensions/runner.ts";
 import type { LoadExtensionsResult, ProjectTrustContext } from "./extensions/types.ts";
 import { SETTINGS_DEFAULTS } from "./settings-defaults.ts";
@@ -23,7 +24,7 @@ export interface ResolveProjectTrustedOptions {
 }
 
 function formatProjectTrustPrompt(cwd: string): string {
-	return `Trust project folder?\n${cwd}\n\nThis allows ${APP_NAME} to load ${CONFIG_DIR_NAME} settings and resources, install missing project packages, and execute project extensions.`;
+	return t("trust_prompt", { app: APP_NAME, configDir: CONFIG_DIR_NAME, cwd });
 }
 
 async function selectProjectTrustOption(

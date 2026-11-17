@@ -770,6 +770,20 @@ export class SettingsManager {
 		this.save();
 	}
 
+	/** The configured interface language, if the user set one. Undefined means "detect from the environment". */
+	getLanguage(): string | undefined {
+		const value = this.settings.language;
+		if (typeof value === "string") return value;
+		return undefined;
+	}
+
+	/** Persist the interface language preference; the value is validated against known locales when applied. */
+	setLanguage(language: string): void {
+		this.globalSettings.language = language;
+		this.markModified("language");
+		this.save();
+	}
+
 	getDefaultThinkingLevel(): ThinkingLevel | undefined {
 		return this.settings.defaultThinkingLevel;
 	}

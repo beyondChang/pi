@@ -1,3 +1,5 @@
+import { t } from "../../i18n/messages-ui.ts";
+
 export type LlamaModelStatus = "unloaded" | "loading" | "loaded" | "downloading" | "sleeping";
 
 export interface LlamaModelInfo {
@@ -105,7 +107,7 @@ function parseLoadProgress(data: unknown): LlamaProgress | undefined {
 		if (index >= 0) ratio = (index + (stageRatio ?? 0)) / stages.length;
 	}
 	return {
-		message: stage ? `Loading ${stage.replaceAll("_", " ")}` : "Loading model",
+		message: stage ? t("llama_loading_stage", { stage: stage.replaceAll("_", " ") }) : t("llama_loading_model"),
 		ratio,
 	};
 }
@@ -125,7 +127,7 @@ function parseDownloadProgress(data: unknown): LlamaProgress | undefined {
 	}
 	if (total <= 0) return undefined;
 	return {
-		message: "Downloading model",
+		message: t("llama_downloading_model"),
 		ratio: done / total,
 		detail: `${formatBytes(done)} / ${formatBytes(total)}`,
 	};
@@ -299,7 +301,7 @@ export class LlamaClient {
 		}, watcher.signal).catch(() => {});
 		try {
 			await this.load(model, signal);
-			onProgress({ message: "Loading model" });
+			onProgress({ message: t("llama_loading_model") });
 			while (true) {
 				if (signal?.aborted) throw signal.reason ?? new Error("Cancelled");
 				const entry = (await this.list({ signal })).find((candidate) => candidate.id === model);
@@ -343,7 +345,7 @@ export class LlamaClient {
 		}, watcher.signal).catch(() => {});
 		try {
 			await this.download(model, signal);
-			onProgress({ message: "Downloading model" });
+			onProgress({ message: t("llama_downloading_model") });
 			while (true) {
 				if (signal?.aborted) throw signal.reason ?? new Error("Cancelled");
 				if (failure) throw new Error(failure);

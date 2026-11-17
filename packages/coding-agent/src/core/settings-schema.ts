@@ -244,6 +244,7 @@ export const SettingsSchema = Type.Object(
 			}),
 		),
 		theme: Type.Optional(Type.String()),
+		language: Type.Optional(Type.String({ description: "Interface display language (e.g. en, zh)." })),
 		compaction: Type.Optional(CompactionSettingsSchema),
 		branchSummary: Type.Optional(BranchSummarySettingsSchema),
 		retry: Type.Optional(RetrySettingsSchema),

@@ -1,4 +1,5 @@
 import { APP_NAME } from "../config.ts";
+import { t } from "../i18n/messages-ui.ts";
 import type { SourceInfo } from "./source-info.ts";
 
 export type SlashCommandSource = "extension" | "prompt" | "skill";
@@ -12,33 +13,34 @@ export interface SlashCommandInfo {
 
 export interface BuiltinSlashCommand {
 	name: string;
-	description: string;
+	/** Resolved on call, so the description follows the locale chosen at startup instead of the import order. */
+	description: () => string;
 	argumentHint?: string;
 }
 
 export const BUILTIN_SLASH_COMMANDS: ReadonlyArray<BuiltinSlashCommand> = [
-	{ name: "settings", description: "Open settings menu" },
-	{ name: "model", description: "Select model (opens selector UI)", argumentHint: "<provider/model>" },
-	{ name: "tree", description: "Navigate session tree (switch branches)" },
-	{ name: "thinking", description: "Set thinking level", argumentHint: "<level>" },
-	{ name: "scoped-models", description: "Enable/disable models for Ctrl+P cycling" },
-	{ name: "export", description: "Export session (HTML default, or specify path: .html/.jsonl)" },
-	{ name: "import", description: "Import a JSONL session, preserving its ID and working directory" },
-	{ name: "share", description: "Share session via a Radius artifact or a GitHub gist" },
-	{ name: "bug", description: "Report a bug to the Pi developers", argumentHint: "<description>" },
-	{ name: "copy", description: "Copy last agent message to clipboard" },
-	{ name: "name", description: "Set session display name" },
-	{ name: "session", description: "Show session info and stats" },
-	{ name: "changelog", description: "Show changelog entries" },
-	{ name: "hotkeys", description: "Show all keyboard shortcuts" },
-	{ name: "fork", description: "Create a new fork from a previous user message" },
-	{ name: "clone", description: "Duplicate the current session at the current position" },
-	{ name: "trust", description: "Save project trust decision for future sessions" },
-	{ name: "login", description: "Configure provider authentication", argumentHint: "<provider>" },
-	{ name: "logout", description: "Remove provider authentication" },
-	{ name: "new", description: "Start a new session" },
-	{ name: "compact", description: "Manually compact the session context" },
-	{ name: "resume", description: "Resume another session" },
-	{ name: "reload", description: "Reload keybindings, extensions, skills, prompts, themes, and context files" },
-	{ name: "quit", description: `Quit ${APP_NAME}` },
+	{ name: "settings", description: () => t("slash_settings") },
+	{ name: "model", description: () => t("slash_model"), argumentHint: "<provider/model>" },
+	{ name: "tree", description: () => t("slash_tree") },
+	{ name: "thinking", description: () => t("slash_thinking"), argumentHint: "<level>" },
+	{ name: "scoped-models", description: () => t("slash_scoped_models") },
+	{ name: "export", description: () => t("slash_export") },
+	{ name: "import", description: () => t("slash_import") },
+	{ name: "share", description: () => t("slash_share") },
+	{ name: "bug", description: () => t("slash_bug"), argumentHint: "<description>" },
+	{ name: "copy", description: () => t("slash_copy") },
+	{ name: "name", description: () => t("slash_name") },
+	{ name: "session", description: () => t("slash_session") },
+	{ name: "changelog", description: () => t("slash_changelog") },
+	{ name: "hotkeys", description: () => t("slash_hotkeys") },
+	{ name: "fork", description: () => t("slash_fork") },
+	{ name: "clone", description: () => t("slash_clone") },
+	{ name: "trust", description: () => t("slash_trust") },
+	{ name: "login", description: () => t("slash_login"), argumentHint: "<provider>" },
+	{ name: "logout", description: () => t("slash_logout") },
+	{ name: "new", description: () => t("slash_new") },
+	{ name: "compact", description: () => t("slash_compact") },
+	{ name: "resume", description: () => t("slash_resume") },
+	{ name: "reload", description: () => t("slash_reload") },
+	{ name: "quit", description: () => t("slash_quit", { app: APP_NAME }) },
 ];

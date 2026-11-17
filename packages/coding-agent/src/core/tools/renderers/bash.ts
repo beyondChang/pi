@@ -7,6 +7,7 @@
  */
 
 import { Container, Spacer, Text } from "@earendil-works/pi-tui";
+import { t } from "../../../i18n/messages-ui.ts";
 import { keyHint } from "../../../modes/interactive/components/keybinding-hints.ts";
 import { VisualLinePreview } from "../../../modes/interactive/components/visual-truncate.ts";
 import { theme } from "../../../modes/interactive/theme/theme.ts";
@@ -63,7 +64,7 @@ function rebuildBashResultRenderComponent(
 					keep: "end",
 					formatHint: (hidden) =>
 						theme.fg("muted", `... (${hidden} earlier lines,`) +
-						` ${keyHint("app.tools.expand", "to expand")}${theme.fg("muted", ")")}`,
+						` ${keyHint("app.tools.expand", t("hint_to_expand"))}${theme.fg("muted", ")")}`,
 				}),
 			);
 		}

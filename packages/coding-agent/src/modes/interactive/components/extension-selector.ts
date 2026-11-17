@@ -4,6 +4,7 @@
  */
 
 import { Container, getKeybindings, Spacer, Text, type TUI } from "@earendil-works/pi-tui";
+import { t } from "../../../i18n/messages-ui.ts";
 import { theme } from "../theme/theme.ts";
 import { CountdownTimer } from "./countdown-timer.ts";
 import { DynamicBorder } from "./dynamic-border.ts";
@@ -67,11 +68,11 @@ export class ExtensionSelectorComponent extends Container {
 		this.addChild(new Spacer(1));
 		this.addChild(
 			new Text(
-				rawKeyHint("↑↓", "navigate") +
+				rawKeyHint("↑↓", t("hint_navigate")) +
 					"  " +
-					keyHint("tui.select.confirm", "select") +
+					keyHint("tui.select.confirm", t("hint_select")) +
 					"  " +
-					keyHint("tui.select.cancel", "cancel"),
+					keyHint("tui.select.cancel", t("hint_cancel")),
 				1,
 				0,
 			),

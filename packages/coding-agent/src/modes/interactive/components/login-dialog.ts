@@ -11,6 +11,7 @@ import {
 	TruncatedText,
 	type TUI,
 } from "@earendil-works/pi-tui";
+import { t } from "../../../i18n/messages-ui.ts";
 import { copyToClipboard } from "../../../utils/clipboard.ts";
 import { openBrowser } from "../../../utils/open-browser.ts";
 import { displayUrl, webUrl } from "../../../utils/web-url.ts";
@@ -63,7 +64,7 @@ export class LoginDialogComponent extends Container implements Focusable {
 		this.onComplete = onComplete;
 
 		const providerName = providerNameOverride || providerId;
-		const title = titleOverride ?? `Login to ${providerName}`;
+		const title = titleOverride ?? t("login_to", { provider: providerName });
 
 		// Top border
 		this.addChild(new DynamicBorder());
@@ -116,11 +117,11 @@ export class LoginDialogComponent extends Container implements Focusable {
 		this.clearDeviceCodeAction();
 		this.abortController.abort();
 		if (this.inputRejecter) {
-			this.inputRejecter(new Error("Login cancelled"));
+			this.inputRejecter(new Error(t("login_cancelled")));
 			this.inputResolver = undefined;
 			this.inputRejecter = undefined;
 		}
-		this.onComplete(false, "Login cancelled");
+		this.onComplete(false, t("login_cancelled"));
 	}
 
 	/**
@@ -159,17 +160,17 @@ export class LoginDialogComponent extends Container implements Focusable {
 		const shownUrl = displayUrl(info.verificationUri);
 		this.contentContainer.addChild(new Text(theme.fg("accent", webLink(shownUrl, shownUrl)), 1, 0));
 
-		const clickHint = process.platform === "darwin" ? "Cmd+click to open" : "Ctrl+click to open";
+		const clickHint = process.platform === "darwin" ? t("cmd_click_to_open") : t("ctrl_click_to_open");
 		this.contentContainer.addChild(new Text(theme.fg("dim", webLink(clickHint, info.verificationUri)), 1, 0));
 		this.contentContainer.addChild(new Spacer(1));
-		this.contentContainer.addChild(new Text(theme.fg("warning", `Enter code: ${info.userCode}`), 1, 0));
+		this.contentContainer.addChild(new Text(theme.fg("warning", t("enter_code", { code: info.userCode })), 1, 0));
 
 		if (!this.signal.aborted && (info.openBrowserOnConfirm || info.copyCodeOnConfirm)) {
 			const actionLabel = info.openBrowserOnConfirm
 				? info.copyCodeOnConfirm
-					? "to open browser and copy code"
-					: "to open browser"
-				: "to copy code";
+					? t("device_action_open_and_copy")
+					: t("device_action_open_only")
+				: t("device_action_copy_only");
 			// Reuse this single row for progress/result text, including in narrow terminals.
 			const hint = new Container();
 			hint.addChild(new TruncatedText(`(${keyHint("tui.select.confirm", actionLabel)})`, 1, 0));
@@ -187,12 +188,12 @@ export class LoginDialogComponent extends Container implements Focusable {
 	}
 
 	private activateDeviceCode(info: OAuthDeviceCodeInfo, hint: Container): void {
-		this.setDeviceCodeStatus(hint, info.copyCodeOnConfirm ? "Copying code..." : "Browser open requested");
+		this.setDeviceCodeStatus(hint, info.copyCodeOnConfirm ? t("copying_code") : t("browser_open_requested"));
 		if (info.copyCodeOnConfirm) {
 			// Do not delay polling or browser opening while clipboard tools are running.
 			void copyToClipboard(info.userCode)
-				.then(() => this.setDeviceCodeStatus(hint, "Code copied to clipboard"))
-				.catch(() => this.setDeviceCodeStatus(hint, "Copy code manually"));
+				.then(() => this.setDeviceCodeStatus(hint, t("code_copied_to_clipboard")))
+				.catch(() => this.setDeviceCodeStatus(hint, t("copy_code_manually")));
 		}
 		if (info.openBrowserOnConfirm) {
 			try {
@@ -213,7 +214,7 @@ export class LoginDialogComponent extends Container implements Focusable {
 		this.contentContainer.addChild(new Spacer(1));
 		this.contentContainer.addChild(new Text(theme.fg("dim", prompt), 1, 0));
 		this.contentContainer.addChild(this.input);
-		this.contentContainer.addChild(new Text(`(${keyHint("tui.select.cancel", "to cancel")})`, 1, 0));
+		this.contentContainer.addChild(new Text(`(${keyHint("tui.select.cancel", t("hint_to_cancel"))})`, 1, 0));
 		this.tui.requestRender();
 
 		return new Promise((resolve, reject) => {
@@ -236,7 +237,7 @@ export class LoginDialogComponent extends Container implements Focusable {
 		this.contentContainer.addChild(this.input);
 		this.contentContainer.addChild(
 			new Text(
-				`(${keyHint("tui.select.cancel", "to cancel,")} ${keyHint("tui.select.confirm", "to submit")})`,
+				`(${keyHint("tui.select.cancel", t("hint_to_cancel_comma"))} ${keyHint("tui.select.confirm", t("hint_to_submit"))})`,
 				1,
 				0,
 			),
@@ -274,7 +275,7 @@ export class LoginDialogComponent extends Container implements Focusable {
 		}
 		if (showCloseHint) {
 			this.contentContainer.addChild(new Spacer(1));
-			this.contentContainer.addChild(new Text(`(${keyHint("tui.select.cancel", "to close")})`, 1, 0));
+			this.contentContainer.addChild(new Text(`(${keyHint("tui.select.cancel", t("hint_to_close"))})`, 1, 0));
 		}
 		this.tui.requestRender();
 	}
@@ -285,7 +286,7 @@ export class LoginDialogComponent extends Container implements Focusable {
 	showWaiting(message: string): void {
 		this.contentContainer.addChild(new Spacer(1));
 		this.contentContainer.addChild(new Text(theme.fg("dim", message), 1, 0));
-		this.contentContainer.addChild(new Text(`(${keyHint("tui.select.cancel", "to cancel")})`, 1, 0));
+		this.contentContainer.addChild(new Text(`(${keyHint("tui.select.cancel", t("hint_to_cancel"))})`, 1, 0));
 		this.tui.requestRender();
 	}
 

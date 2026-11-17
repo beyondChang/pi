@@ -14,6 +14,7 @@ import {
 	type TUI,
 } from "@earendil-works/pi-tui";
 import type { KeybindingsManager } from "../../../core/keybindings.ts";
+import { t } from "../../../i18n/messages-ui.ts";
 import { editInExternalEditor } from "../external-editor.ts";
 import { getEditorTheme, theme } from "../theme/theme.ts";
 import { DynamicBorder } from "./dynamic-border.ts";
@@ -93,12 +94,12 @@ export class ExtensionEditorComponent extends Container implements Focusable {
 
 		// Add hint
 		const hint =
-			keyHint("tui.select.confirm", "submit") +
+			keyHint("tui.select.confirm", t("hint_submit")) +
 			"  " +
-			keyHint("tui.input.newLine", "newline") +
+			keyHint("tui.input.newLine", t("hint_newline")) +
 			"  " +
-			keyHint("tui.select.cancel", "cancel") +
-			`  ${keyHint("app.editor.external", "external editor")}`;
+			keyHint("tui.select.cancel", t("hint_cancel")) +
+			`  ${keyHint("app.editor.external", t("hint_external_editor"))}`;
 		this.addChild(new Text(hint, 1, 0));
 
 		this.addChild(new Spacer(1));

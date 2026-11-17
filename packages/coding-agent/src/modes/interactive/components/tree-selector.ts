@@ -15,6 +15,7 @@ import {
 } from "@earendil-works/pi-tui";
 import type { SessionTreeNode } from "../../../core/session-manager.ts";
 import { formatReadLineRange } from "../../../core/tools/render-utils.ts";
+import { t } from "../../../i18n/messages-ui.ts";
 import { shortenHomePath } from "../../../utils/paths.ts";
 import { theme } from "../theme/theme.ts";
 import { DynamicBorder } from "./dynamic-border.ts";
@@ -1168,8 +1169,8 @@ class SearchLine implements Component, Focusable {
 
 		const query = this.treeList.getSearchQuery();
 		const line = query
-			? `  ${theme.fg("muted", "Type to search:")} ${theme.fg("accent", query)}`
-			: `  ${theme.fg("muted", "Type to search:")} `;
+			? `  ${theme.fg("muted", t("type_to_search"))} ${theme.fg("accent", query)}`
+			: `  ${theme.fg("muted", t("type_to_search"))} `;
 		if (!this.focused) return [truncateToWidth(line, width)];
 
 		const content = truncateToWidth(line, Math.max(0, width - 1));
@@ -1303,11 +1304,11 @@ class LabelInput implements Component, Focusable {
 		const lines: string[] = [];
 		const indent = "  ";
 		const availableWidth = width - indent.length;
-		lines.push(truncateToWidth(`${indent}${theme.fg("muted", "Label (empty to remove):")}`, width));
+		lines.push(truncateToWidth(`${indent}${theme.fg("muted", t("label_empty_to_remove"))}`, width));
 		lines.push(...this.input.render(availableWidth).map((line) => truncateToWidth(`${indent}${line}`, width)));
 		lines.push(
 			truncateToWidth(
-				`${indent}${keyHint("tui.select.confirm", "save")}  ${keyHint("tui.select.cancel", "cancel")}`,
+				`${indent}${keyHint("tui.select.confirm", t("hint_save"))}  ${keyHint("tui.select.cancel", t("hint_cancel"))}`,
 				width,
 			),
 		);

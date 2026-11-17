@@ -1,6 +1,7 @@
 import type { Api, CredentialInfo, Model } from "@earendil-works/pi-ai";
 import { resolveCliModel, resolveModelReference } from "../core/model-resolver.ts";
 import type { ModelRuntime } from "../core/model-runtime.ts";
+import { t } from "../i18n/messages-ui.ts";
 import type { Args } from "./args.ts";
 import { AuthCommandError, type AuthCommandKind, getAuthCredential, validateAuthCommandArgs } from "./auth-command.ts";
 
@@ -34,7 +35,7 @@ export async function resolveCredentialForPrint(
 		if (cliModel) {
 			const resolved = resolveCliModel({ cliProvider: provider.id, cliModel, modelRuntime });
 			if (resolved.error || !resolved.model) {
-				throw new AuthCommandError(resolved.error ?? "Unable to resolve the requested provider/model");
+				throw new AuthCommandError(resolved.error ?? t("unable_resolve_provider_model"));
 			}
 			providers.push({ id: provider.id, model: resolved.model });
 		} else {
@@ -77,12 +78,14 @@ export async function resolveCredentialForPrint(
 		const providerId = providers[0]?.id;
 		const type = providerId ? credentialTypes.get(providerId) : undefined;
 		if (cliProvider && kind === "api_key" && type === "oauth") {
-			throw new AuthCommandError(`Provider "${providerId}" is configured with OAuth, not an API key`);
+			throw new AuthCommandError(t("provider_configured_oauth_not_api_key", { providerId }));
 		}
 		if (cliProvider && kind === "bearer_token" && type !== "oauth") {
-			throw new AuthCommandError(`Provider "${providerId}" is not configured with an OAuth bearer token`);
+			throw new AuthCommandError(t("provider_not_configured_oauth", { provider: providerId }));
 		}
-		throw new AuthCommandError(`No usable ${kind === "api_key" ? "API key" : "OAuth bearer token"} is configured`);
+		throw new AuthCommandError(
+			t("no_usable_credential", { kind: kind === "api_key" ? t("api_key") : t("oauth_bearer_token") }),
+		);
 	}
 	throw new AuthCommandError(
 		`Multiple configured providers matched (${credentials.map(({ providerId }) => providerId).join(", ")}). Specify --provider.`,

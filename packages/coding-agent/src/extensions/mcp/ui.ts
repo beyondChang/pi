@@ -18,6 +18,7 @@ import {
 } from "@earendil-works/pi-tui";
 import type { ExtensionCommandContext } from "../../core/extensions/types.ts";
 import type { KeybindingsManager } from "../../core/keybindings.ts";
+import { t } from "../../i18n/messages-ui.ts";
 import { AuthUrlComponent } from "../../modes/interactive/components/auth-url.ts";
 import { DynamicBorder } from "../../modes/interactive/components/dynamic-border.ts";
 import { keyHint } from "../../modes/interactive/components/keybinding-hints.ts";
@@ -130,7 +131,7 @@ export class McpManagerView implements McpUi, Component, Focusable {
 				body.push(new Spacer(1));
 				const footer = `${keyHint("tui.select.confirm", menu.confirmLabel)} • ${keyHint("tui.select.cancel", menu.cancelLabel)}`;
 				if (menu.items.length === 0) {
-					body.push(new Text(this.theme.fg("muted", menu.empty ?? "Nothing to show."), 1, 0));
+					body.push(new Text(this.theme.fg("muted", menu.empty ?? t("nothing_to_show")), 1, 0));
 					this.setContent(frame(this.theme, menu.title, body, keyHint("tui.select.cancel", menu.cancelLabel)), {
 						handleInput: (data) => {
 							if (this.keybindings.matches(data, "tui.select.cancel")) finish(undefined);
@@ -167,7 +168,7 @@ export class McpManagerView implements McpUi, Component, Focusable {
 			this.setContent(frame(this.theme, title, body));
 			return;
 		}
-		this.setContent(frame(this.theme, title, body, keyHint("tui.select.cancel", "cancel")), {
+		this.setContent(frame(this.theme, title, body, keyHint("tui.select.cancel", t("hint_cancel"))), {
 			handleInput: (data) => {
 				if (this.keybindings.matches(data, "tui.select.cancel")) onCancel();
 			},
@@ -208,7 +209,7 @@ export class McpManagerView implements McpUi, Component, Focusable {
 					this.theme,
 					title,
 					body,
-					`${keyHint("tui.select.confirm", "submit")} • ${keyHint("tui.select.cancel", "cancel")}`,
+					`${keyHint("tui.select.confirm", t("hint_submit"))} • ${keyHint("tui.select.cancel", t("hint_cancel"))}`,
 				),
 				{
 					handleInput: (data) => {

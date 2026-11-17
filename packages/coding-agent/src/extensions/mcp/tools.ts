@@ -34,6 +34,7 @@ import type {
 import { READ_MCP_RESOURCE_TOOL } from "../../core/mcp-servers.ts";
 import { formatToolCallWithArgs, getTextOutput, replaceTabs } from "../../core/tools/render-utils.ts";
 import { formatSize } from "../../core/tools/truncate.ts";
+import { t } from "../../i18n/messages-ui.ts";
 import { keyHint } from "../../modes/interactive/components/keybinding-hints.ts";
 import { VisualLinePreview } from "../../modes/interactive/components/visual-truncate.ts";
 import { writeOutputFile } from "../../utils/output-files.ts";
@@ -317,7 +318,7 @@ export function createMcpToolRenderers(label: string): ToolRenderers {
 						maxVisualLines: OUTPUT_PREVIEW_LINES,
 						keep: "start",
 						formatHint: (hidden) =>
-							`${theme.fg("muted", `... (${hidden} more lines,`)} ${keyHint("app.tools.expand", "to expand")}${theme.fg("muted", ")")}`,
+							`${theme.fg("muted", `... (${hidden} more lines,`)} ${keyHint("app.tools.expand", t("hint_to_expand"))}${theme.fg("muted", ")")}`,
 					}),
 				);
 				const fullOutputPath = (result.details as McpToolDetails | undefined)?.fullOutputPath;
