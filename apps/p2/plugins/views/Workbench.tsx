@@ -7,6 +7,7 @@ import {
 	CloseIcon,
 	reportClientError,
 	useComposerState,
+	useMessages,
 	useObject,
 	useReadable,
 	useRegistry,
@@ -29,6 +30,7 @@ import { type Annotation, type View, Views } from "./contract.ts";
 import { ViewKinds } from "./kinds.ts";
 import { activate, adopt, arrange, CHAT, move, type Rect, reconcile, resize, viewsIn, type Zone } from "./layout.ts";
 import { hide, setLayout, useAnnotateMode, useLayout } from "./layout-store.ts";
+import { messages } from "./messages.ts";
 
 /** Height of an area's tab strip (and the phone's strip). */
 const TABS = 36;
@@ -53,6 +55,7 @@ export function Workbench({ children }: { children?: ReactNode }) {
 	const [drag, setDrag] = useState<Drag>();
 	const kinds = useRegistry(ViewKinds);
 	const { fail } = useComposerState();
+	const { t } = useMessages(messages);
 
 	const arrangement = useReadable(views?.arrangement);
 	useEffect(() => {
@@ -145,8 +148,8 @@ export function Workbench({ children }: { children?: ReactNode }) {
 								<button
 									type="button"
 									className="views-tab-close"
-									aria-label={`Hide ${titleOf(id, byId)}`}
-									title="Hide here (the Views sheet shows it again)"
+									aria-label={t("hide_tab", titleOf(id, byId))}
+									title={t("hide_tab_title")}
 									onPointerDown={(event) => event.stopPropagation()}
 									onClick={() => session && hide(session, id)}
 								>

@@ -8,6 +8,7 @@ import {
 	Markdown,
 	type PaneProps,
 	patchLines,
+	useMessages,
 	useObject,
 	useReadable,
 	useStatus,
@@ -15,6 +16,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { Workspace } from "../workspace/contract.ts";
 import type { WorkspaceChange } from "../workspace/protocol.ts";
+import { messages } from "./messages.ts";
 import { excerpt, usePaneSelection } from "./pane-kit.tsx";
 
 /**
@@ -22,10 +24,11 @@ import { excerpt, usePaneSelection } from "./pane-kit.tsx";
  * stored before views had items, which kept it in `path`) says so instead of loading forever.
  */
 export function MarkdownPane({ session, item, select }: PaneProps) {
+	const { t } = useMessages(messages);
 	if (!item)
 		return (
 			<div className="views-doc">
-				<div className="notice error">This view has no file</div>
+				<div className="notice error">{t("no_file")}</div>
 			</div>
 		);
 	return <MarkdownFile session={session} path={item} select={select} />;
@@ -198,5 +201,6 @@ function useWorkspaceText(session: string, path: string): { value?: string; erro
 }
 
 function Unavailable() {
-	return <p className="empty-note">Only people who may send in this session see its files.</p>;
+	const { t } = useMessages(messages);
+	return <p className="empty-note">{t("files_restricted")}</p>;
 }

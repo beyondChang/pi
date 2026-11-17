@@ -1,4 +1,4 @@
-import type { Held } from "@p2/app/v1";
+import type { Held, MessagesOf, Translator } from "@p2/app/v1";
 import { BACKGROUND_CONTEXT, whenLive } from "@p2/app/v1";
 import {
 	browserEnvironment,
@@ -13,6 +13,7 @@ import {
 	type Route,
 	type SocketEvents,
 	useDragSize,
+	useMessages,
 } from "@p2/app/v1/web";
 import { useEffect, useRef, useState } from "react";
 import type { Terminals } from "./contract.ts";
@@ -31,6 +32,7 @@ import {
 	UNDERLINE,
 	type VtTerminal,
 } from "./ghostty.ts";
+import { messages } from "./messages.ts";
 import type { TerminalEvent, TerminalInfo, TerminalTheme } from "./protocol.ts";
 import { typedChange } from "./terminal-input.ts";
 import ghosttyWasm from "./vendor/ghostty/ghostty-vt.wasm?url";
@@ -1260,10 +1262,12 @@ const KEYS: { label: string; input?: KeyInput; text?: string }[] = [
 ];
 
 /** A tab's text: the name it was opened with, else its program's title, else its number (the agent's `-t`). */
-function label(terminal: TerminalInfo): string {
+type TerminalT = Translator<"p2.terminals", MessagesOf<typeof messages>>;
+
+function label(t: TerminalT, terminal: TerminalInfo): string {
 	// A host running older code numbers none.
-	const name = terminal.name || terminal.title || (terminal.index ? `Terminal ${terminal.index}` : "Terminal");
-	return terminal.exited ? `${name} (exited)` : name;
+	const name = terminal.name || terminal.title || (terminal.index ? t("terminal_named", terminal.index) : "Terminal");
+	return terminal.exited ? `${name}${t("exited_suffix")}` : name;
 }
 
 export function TerminalView({
@@ -1294,6 +1298,7 @@ export function TerminalView({
 	/** Hide the panel; the terminals keep running. The panel also hides once its last terminal is closed. */
 	onHide?: () => void;
 }) {
+	const { t } = useMessages(messages);
 	const frame = useRef<HTMLDivElement>(null);
 	const screen = useRef<HTMLDivElement>(null);
 	const input = useRef<HTMLTextAreaElement>(null);
@@ -1379,7 +1384,7 @@ export function TerminalView({
 	const pasteClipboard = () => {
 		void session.current?.pasteClipboard().then(
 			() => setPasteNotice(""),
-			() => setPasteNotice("Clipboard unavailable. Long-press the terminal to paste."),
+			() => setPasteNotice(t("paste_unavailable")),
 		);
 	};
 	const toggleKeys = () => {
@@ -1400,33 +1405,33 @@ export function TerminalView({
 						key={terminal.id}
 						aria-pressed={terminal.id === current?.id}
 						className={terminal.exited ? "exited" : ""}
-						title={`${terminal.index}: ${terminal.env ? `${terminal.env}:${terminal.cwd}` : terminal.cwd}${terminal.agent ? " (opened by the agent)" : ""}`}
+						title={`${terminal.index}: ${terminal.env ? `${terminal.env}:${terminal.cwd}` : terminal.cwd}${terminal.agent ? t("agent_opened") : ""}`}
 						onPointerDown={keepFocus}
 						onClick={() => session.current?.attach(terminal.id)}
 					>
 						{terminal.agent && <span className="terminal-agent">Pi</span>}
-						{label(terminal)}
+						{label(t, terminal)}
 					</button>
 				))}
 				<button
 					type="button"
 					className="icon-button"
-					aria-label="New terminal"
+					aria-label={t("new_terminal")}
 					onPointerDown={keepFocus}
 					onClick={() => session.current?.open()}
 				>
 					<PlusIcon size={16} />
 				</button>
-				<button type="button" aria-label="Paste into terminal" onPointerDown={keepFocus} onClick={pasteClipboard}>
-					Paste
+				<button type="button" aria-label={t("paste_aria")} onPointerDown={keepFocus} onClick={pasteClipboard}>
+					{t("paste")}
 				</button>
 				<span className="spacer" />
 				<button
 					type="button"
 					className="icon-button"
-					aria-label="Extra keys"
+					aria-label={t("extra_keys")}
 					aria-pressed={keys}
-					title={keys ? "Hide extra keys" : "Show extra keys"}
+					title={keys ? t("hide_keys") : t("show_keys")}
 					onPointerDown={keepFocus}
 					onClick={toggleKeys}
 				>
@@ -1435,8 +1440,8 @@ export function TerminalView({
 				<button
 					type="button"
 					className="icon-button"
-					aria-label={placement === "side" ? "Move terminal to the bottom" : "Move terminal to the side"}
-					title={placement === "side" ? "Move to the bottom" : "Move to the side"}
+					aria-label={placement === "side" ? t("move_bottom_aria") : t("move_side_aria")}
+					title={placement === "side" ? t("move_bottom_title") : t("move_side_title")}
 					onClick={() => onMove(current?.id)}
 				>
 					{placement === "side" ? <PanelBottomIcon /> : <PanelSideIcon />}
@@ -1445,8 +1450,8 @@ export function TerminalView({
 					<button
 						type="button"
 						className="icon-button"
-						aria-label={current.exited ? "Remove terminal" : "Close terminal"}
-						title={current.exited ? "Remove" : "Close (kills the program)"}
+						aria-label={current.exited ? t("remove_terminal_aria") : t("close_terminal_aria")}
+						title={current.exited ? t("remove") : t("close_title")}
 						onClick={() => session.current?.close()}
 					>
 						<CloseIcon />
@@ -1456,8 +1461,8 @@ export function TerminalView({
 					<button
 						type="button"
 						className="icon-button"
-						aria-label="Hide terminal"
-						title="Hide (keeps running)"
+						aria-label={t("hide_terminal_aria")}
+						title={t("hide_title")}
 						onClick={onHide}
 					>
 						<HideIcon />
@@ -1473,42 +1478,39 @@ export function TerminalView({
 				<p className={`notice workspace-note ${state.error || current?.exited?.error ? "error" : ""}`}>
 					{state.error ??
 						(!state.connected
-							? "Connecting…"
+							? t("connecting")
 							: current?.exited?.error
 								? current.exited.error
-								: `Exited with code ${current?.exited?.code}`)}
+								: t("exited_code", current?.exited?.code))}
 				</p>
 			)}
 			{state.busy && state.busy.terminalId === current?.id && (
 				<p className="notice workspace-note terminal-confirm">
-					<span>
-						{state.busy.program ? <code>{state.busy.program}</code> : "A program"} is running in this terminal.
-						Close it anyway?
-					</span>
+					<span>{state.busy.program ? t("busy_program", state.busy.program) : t("busy_a_program")}</span>
 					<button type="button" className="text-action danger" onClick={() => session.current?.close(true)}>
-						Close
+						{t("close")}
 					</button>
 					<button type="button" className="text-action" onClick={() => session.current?.keep()}>
-						Cancel
+						{t("cancel")}
 					</button>
 				</p>
 			)}
 			{state.outdated && (
 				<p className="notice workspace-note terminal-outdated">
 					<span>
-						The terminal host runs older code.{" "}
+						{t("outdated")}{" "}
 						{state.outdated.running === undefined
-							? "Restarting it ends its terminals."
-							: `Restarting it ends ${state.outdated.running} running terminal${state.outdated.running === 1 ? "" : "s"}.`}
+							? t("outdated_restart")
+							: t("outdated_restart_many", state.outdated.running)}
 					</span>
 					<button type="button" className="text-action" onClick={() => session.current?.restartHost()}>
-						Restart
+						{t("restart")}
 					</button>
 				</p>
 			)}
 			{state.connected && !current && !state.terminals.some((terminal) => !terminal.exited) && (
 				<button type="button" className="button terminal-start" onClick={() => session.current?.open()}>
-					New terminal
+					{t("new_terminal")}
 				</button>
 			)}
 			<div
@@ -1526,7 +1528,7 @@ export function TerminalView({
 				<textarea
 					ref={input}
 					className="terminal-input"
-					aria-label="Terminal input"
+					aria-label={t("input_aria")}
 					autoCapitalize="off"
 					autoComplete="off"
 					autoCorrect="off"
@@ -1536,10 +1538,10 @@ export function TerminalView({
 			{keys && (
 				<div className="terminal-keys">
 					<button type="button" aria-pressed={ctrl} onPointerDown={keepFocus} onClick={() => setCtrl(!ctrl)}>
-						Ctrl
+						{t("ctrl")}
 					</button>
 					<button type="button" aria-pressed={alt} onPointerDown={keepFocus} onClick={() => setAlt(!alt)}>
-						Alt
+						{t("alt")}
 					</button>
 					{KEYS.map((entry) => (
 						<button
@@ -1567,6 +1569,7 @@ export function TerminalView({
 
 /** The terminal below the chat; its top edge drags to resize it. */
 export function TerminalPanel(props: Omit<Parameters<typeof TerminalView>[0], "placement">) {
+	const { t } = useMessages(messages);
 	const panel = useRef<HTMLElement>(null);
 	const height = useDragSize("p2-terminal-height", "--terminal-height");
 	const startResize = (event: React.PointerEvent<HTMLButtonElement>) => {
@@ -1578,11 +1581,11 @@ export function TerminalPanel(props: Omit<Parameters<typeof TerminalView>[0], "p
 		height.drag(event, element, (moved) => Math.min(Math.max(bottom - moved.clientY, 120), limit));
 	};
 	return (
-		<section className="terminal-panel" aria-label="Terminal" ref={panel} style={height.style}>
+		<section className="terminal-panel" aria-label={t("panel_aria")} ref={panel} style={height.style}>
 			<button
 				type="button"
 				className="terminal-resize"
-				aria-label="Drag to resize terminal"
+				aria-label={t("resize_aria")}
 				tabIndex={-1}
 				onPointerDown={startResize}
 			/>

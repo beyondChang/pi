@@ -1,12 +1,13 @@
 // The discord plugin's web facet: Settings › Discord (the owner's bots, BotsSheet.tsx), the Session sheet's Discord row and
 // the session's link sheet (LinkSheet.tsx), and the transcript's note on a delivered batch. The sheets render from the
 // sidebar foot's slot, which stays mounted while they stack on the Session sheet.
-import { contribute, defineFacet } from "@p2/app/v1";
+import { contribute, defineFacet, Translations } from "@p2/app/v1";
 import {
 	ChevronIcon,
 	openLayer,
 	SettingsSections,
 	Slots,
+	useMessages,
 	useObject,
 	useOwner,
 	useReadable,
@@ -18,6 +19,7 @@ import { AddBotSheet, BotSheet, BotsSheet } from "./BotsSheet.tsx";
 import { DISCORD_BATCH, Discord } from "./contract.ts";
 import { HeldDiscord } from "./held.ts";
 import { LinkSheet } from "./LinkSheet.tsx";
+import { messages } from "./messages.ts";
 import "./style.css";
 
 /**
@@ -44,6 +46,7 @@ function DiscordSheets() {
 
 /** The Session sheet's Discord row: the session's channel, or "Not linked". */
 function SessionRow() {
+	const { t } = useMessages(messages);
 	const session = useRoute().session;
 	const bindings = useReadable(useObject(Discord, {})?.bindings);
 	if (!session) return null;
@@ -55,7 +58,7 @@ function SessionRow() {
 			onClick={() => openLayer({ kind: "sheet", name: "discord-link", locator: session })}
 		>
 			<span>Discord</span>
-			<small className="row-value">{linked ? `#${linked.channelName}` : "Not linked"}</small>
+			<small className="row-value">{linked ? `#${linked.channelName}` : t("not_linked")}</small>
 			<ChevronIcon />
 		</button>
 	);
@@ -73,6 +76,7 @@ function batchDisplay(data: unknown) {
 
 export default defineFacet((host) => {
 	contribute(host, "p2.web-discord", (self) => {
+		self.contribute(Translations, messages.translations);
 		self.contribute(SettingsSections, { discord: { label: "Discord", order: 60, Sheet: DiscordSheets } });
 		self.contribute(Slots, {
 			"session-rows:discord": SessionRow,

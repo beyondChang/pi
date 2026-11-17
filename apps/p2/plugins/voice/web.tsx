@@ -6,7 +6,15 @@
 // A read/write guest talks (its transcripts are its own messages) but hears nothing yet: the answers are read aloud only
 // in the owner's browser. View-only guests have no voice mode. Only when the server has a speech service (voice.json).
 
-import { BACKGROUND_CONTEXT, contribute, defineFacet, type HeldIn, liveIn } from "@p2/app/v1";
+import {
+	BACKGROUND_CONTEXT,
+	contribute,
+	defineFacet,
+	type HeldIn,
+	liveIn,
+	type MessagesOf,
+	Translations,
+} from "@p2/app/v1";
 import {
 	CheckIcon,
 	closeLayers,
@@ -15,6 +23,7 @@ import {
 	Slots,
 	useCanWrite,
 	useComposerState,
+	useMessages,
 	useObject,
 	useOptimisticCall,
 	useOwner,
@@ -28,6 +37,7 @@ import { ChatMode, DEFAULT_AGENT_NAME } from "../chat-mode/contract.ts";
 import { engineLabel, languagesOf, resolved, resolveVoice } from "./choice.ts";
 import { VoiceMode, VoiceService } from "./contract.ts";
 import { VoiceEngine, type VoicePhase, type VoiceSettings } from "./engine.ts";
+import { messages } from "./messages.ts";
 import { DEFAULT_PAUSE, MAX_PAUSE, MIN_PAUSE, type Voices as VoiceConfig } from "./protocol.ts";
 import "./style.css";
 
@@ -139,16 +149,16 @@ const shown = {
 	},
 };
 
-const LABELS: Record<VoicePhase, string> = {
-	off: "Voice mode",
-	connecting: "Connecting",
-	listening: "Listening",
-	hearing: "Hearing you",
-	thinking: "Working",
-	talking: "Someone is talking",
-	preparing: "Preparing speech",
-	speaking: "Playing",
-	error: "Voice error",
+const PHASE_KEYS: Record<VoicePhase, keyof MessagesOf<typeof messages>> = {
+	off: "phase_off",
+	connecting: "phase_connecting",
+	listening: "phase_listening",
+	hearing: "phase_hearing",
+	thinking: "phase_thinking",
+	talking: "phase_talking",
+	preparing: "phase_preparing",
+	speaking: "phase_speaking",
+	error: "phase_error",
 };
 
 /** A microphone; `muted`: struck through. */
@@ -197,6 +207,7 @@ function useVoiceMode(input: { session: string; conversation: number } | undefin
 }
 
 function VoiceChip() {
+	const { t } = useMessages(messages);
 	const { owner, talker } = useTalker();
 	const config = useVoiceConfig(talker);
 	const { session, conversation = 1 } = useRoute();
@@ -322,12 +333,12 @@ function VoiceChip() {
 	const waiting = engine.waiting;
 	const state =
 		waiting > 0
-			? `Waiting to reconnect (${waiting} ${waiting === 1 ? "message" : "messages"})`
+			? t("waiting_reconnect", waiting)
 			: phase === "talking"
-				? `${engine.talking.join(", ")} talking`
-				: LABELS[phase];
+				? t("others_talking", engine.talking.join(", "))
+				: t(PHASE_KEYS[phase]);
 	const muted = engine.muted;
-	const title = `${error ? `${state}: ${error}` : state}${on && muted ? " (microphone muted)" : ""}`;
+	const title = `${error ? `${state}: ${error}` : state}${on && muted ? t("muted_suffix") : ""}`;
 	return (
 		<>
 			<button
@@ -337,11 +348,11 @@ function VoiceChip() {
 				aria-label={
 					!on
 						? error
-							? `Voice error: ${error}. Turn voice mode on`
-							: "Turn voice mode on"
+							? t("error_prefix", error)
+							: t("turn_on")
 						: engine.reading
-							? `${title}. Stop speaking`
-							: `${title}. Turn voice mode off`
+							? `${title}${t("stop_speaking")}`
+							: `${title}${t("turn_off")}`
 				}
 				title={title}
 				onClick={toggle}
@@ -355,8 +366,8 @@ function VoiceChip() {
 					type="button"
 					className={`chip toggle voice-mute ${muted ? "on" : ""}`}
 					aria-pressed={muted}
-					aria-label={muted ? "Microphone muted. Unmute" : "Mute microphone"}
-					title={muted ? "Microphone muted" : "Mute microphone"}
+					aria-label={muted ? t("muted_unmute") : t("mute")}
+					title={muted ? t("muted_title") : t("mute")}
 					onClick={() => engine.setMuted(!muted)}
 				>
 					<MicIcon muted={muted} size={16} />
@@ -371,6 +382,7 @@ function VoiceChip() {
  * guest's has the state and its own pause only (the voice is the owner's).
  */
 function VoiceSheet({ config, owner, onClose }: { config: VoiceConfig; owner: boolean; onClose: () => void }) {
+	const { t } = useMessages(messages);
 	const { session, conversation = 1 } = useRoute();
 	const input = useMemo(() => (session ? { session, conversation } : undefined), [session, conversation]);
 	const { ownerMode, voice: shared } = useVoiceMode(input);
@@ -426,7 +438,7 @@ function VoiceSheet({ config, owner, onClose }: { config: VoiceConfig; owner: bo
 
 	const seconds = usePause();
 	const phase = engine?.phase ?? "off";
-	const state = engine?.running ? LABELS[phase] : "Voice mode off";
+	const state = engine?.running ? t(PHASE_KEYS[phase]) : t("off");
 	const last = engine?.lastError;
 	const top = (
 		<>
@@ -434,14 +446,15 @@ function VoiceSheet({ config, owner, onClose }: { config: VoiceConfig; owner: bo
 				{state}
 				{last && (
 					<span className="voice-last-error">
-						{" · "}Last error {new Date(last.at).toLocaleTimeString()}: {last.message}
+						{t("last_error", new Date(last.at).toLocaleTimeString(), last.message)}
 					</span>
 				)}
-				{owner && !input && " · Choices apply to new conversations"}
+				{owner && !input && t("apply_new")}
 			</p>
 			<label className="field voice-speed">
 				<span className="label">
-					Pause before sending<span className="voice-speed-value">{seconds.toFixed(1)} s</span>
+					{t("pause_label")}
+					<span className="voice-speed-value">{seconds.toFixed(1)} s</span>
 				</span>
 				<input
 					type="range"
@@ -449,7 +462,7 @@ function VoiceSheet({ config, owner, onClose }: { config: VoiceConfig; owner: bo
 					max={MAX_PAUSE}
 					step="0.1"
 					value={seconds}
-					aria-label="Pause before sending"
+					aria-label={t("pause_aria")}
 					onChange={(event) => pause.set(Number(event.target.value))}
 				/>
 			</label>
@@ -457,17 +470,16 @@ function VoiceSheet({ config, owner, onClose }: { config: VoiceConfig; owner: bo
 	);
 	if (!owner)
 		return (
-			<Sheet title="Voice" onClose={onClose} className="voice-sheet">
+			<Sheet title={t("sheet_title")} onClose={onClose} className="voice-sheet">
 				{top}
 				<p className="muted small voice-shared">
-					Voice: {voiceName}
-					{languages.length > 1 && languageName ? ` · ${languageName}` : ""} (the owner's)
+					{t("voice_shared", voiceName, languages.length > 1 ? languageName : null)}
 				</p>
-				<p className="muted small">How long you can pause before what you said is sent.</p>
+				<p className="muted small">{t("pause_hint")}</p>
 			</Sheet>
 		);
 	return (
-		<Sheet title="Voice" onClose={onClose} className="voice-sheet">
+		<Sheet title={t("sheet_title")} onClose={onClose} className="voice-sheet">
 			<div className="sheet-sticky">
 				{top}
 				{/* The choice in words (the chosen row may be far down the list), and the language beside it. */}
@@ -479,14 +491,14 @@ function VoiceSheet({ config, owner, onClose }: { config: VoiceConfig; owner: bo
 						{languages.length <= 1 && multilingual.length > 0 && (
 							<span className="muted">
 								{" "}
-								(other languages: a {multilingual.map((option) => engineLabel(option)).join(" or ")} voice)
+								{t("other_languages", multilingual.map((option) => engineLabel(option)).join(" or "))}
 							</span>
 						)}
 					</p>
 					{languages.length > 1 && (
 						<select
 							className="input voice-language"
-							aria-label="Language"
+							aria-label={t("language_aria")}
 							value={language ?? ""}
 							onChange={(event) => {
 								update({ language: event.target.value });
@@ -503,7 +515,8 @@ function VoiceSheet({ config, owner, onClose }: { config: VoiceConfig; owner: bo
 				</div>
 				<label className="field voice-speed">
 					<span className="label">
-						Speed<span className="voice-speed-value">{settings.speed.toFixed(2)}×</span>
+						{t("speed_label")}
+						<span className="voice-speed-value">{settings.speed.toFixed(2)}×</span>
 					</span>
 					<input
 						type="range"
@@ -511,7 +524,7 @@ function VoiceSheet({ config, owner, onClose }: { config: VoiceConfig; owner: bo
 						max="1.5"
 						step="0.05"
 						value={settings.speed}
-						aria-label="Speed"
+						aria-label={t("speed_aria")}
 						onChange={(event) => update({ speed: Number(event.target.value) })}
 					/>
 				</label>
@@ -545,7 +558,7 @@ function VoiceSheet({ config, owner, onClose }: { config: VoiceConfig; owner: bo
 					</section>
 				))}
 			</div>
-			<p className="muted small">Tap a voice, or choose a language, to hear it.</p>
+			<p className="muted small">{t("voice_hint")}</p>
 		</Sheet>
 	);
 }
@@ -569,6 +582,7 @@ function VoiceShown({ children }: { children: ReactNode }) {
 
 export default defineFacet((host) => {
 	contribute(host, "p2.voice-web", (self) => {
+		self.contribute(Translations, messages.translations);
 		self.contribute(SettingsSections, {
 			voice: {
 				label: "Voice",

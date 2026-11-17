@@ -5,6 +5,7 @@ import {
 	QueryCache,
 	Sheet,
 	shortPath,
+	useMessages,
 	useNavigation,
 	useObject,
 	useReadable,
@@ -12,6 +13,7 @@ import {
 } from "@p2/app/v1/web";
 import { useEffect, useRef, useState } from "react";
 import { type DirectoryListing, Envs } from "./contract.ts";
+import { messages } from "./messages.ts";
 
 /** The picker at the location its view passes (`env`, `value`): the session's, or the new session's. */
 export const DIRECTORY_PICKER = { kind: "sheet", name: "cwd" } as const;
@@ -52,6 +54,7 @@ export function DirectoryPicker({
 	/** Where the sheet's Back leads (the new-session screen's recent folders); no Back control without it. */
 	onBack?: () => void;
 }) {
+	const { t } = useMessages(messages);
 	const service = useObject(Envs, {});
 	const envs = useReadable(service?.envs) ?? [];
 	// The environments' connections start now, as in Pi Mobile: the first listing need not wait for ssh.
@@ -147,36 +150,36 @@ export function DirectoryPicker({
 	const leaves = moves && sandboxHost(moving.env) !== undefined;
 	const [leaving, setLeaving] = useState<string>();
 	const target = listing ? listingKey(env, listing.path) : undefined;
-	const use = listing && `${moves ? "Move session to" : "Use"} ${locationLabel(env, listing.path)}`;
+	const use = listing && `${moves ? t("picker_move_to") : t("picker_use")} ${locationLabel(env, listing.path)}`;
 
 	return (
-		<Sheet title="Working directory" onClose={onClose} {...(onBack ? { onBack } : {})}>
+		<Sheet title={t("picker_title")} onClose={onClose} {...(onBack ? { onBack } : {})}>
 			{/* Path and the choice stay pinned while the folder list scrolls with the sheet. */}
 			<div className="sheet-sticky directory-head">
 				{envs.length > 0 && (
 					<select
 						className="input"
-						aria-label="Environment"
+						aria-label={t("picker_env_aria")}
 						value={env ?? ""}
 						onChange={(event) => browse("~", event.target.value || null)}
 						disabled={loading}
 					>
-						<option value="">This device</option>
+						<option value="">{t("picker_this_device")}</option>
 						{envs.map(
 							(entry) =>
 								entry.config.type === "ssh" && (
 									<option key={entry.name} value={entry.name}>
-										{entry.name} (remote)
+										{entry.name} {t("picker_remote")}
 									</option>
 								),
 						)}
 						{envs.some((entry) => entry.config.type === "gondolin") && (
-							<optgroup label="Sandboxes">
+							<optgroup label={t("picker_sandboxes")}>
 								{envs.map(
 									(entry) =>
 										entry.config.type === "gondolin" && (
 											<option key={entry.name} value={entry.name}>
-												{entry.name} · sandbox on {entry.config.host}
+												{entry.name} · {t("picker_sandbox_on", entry.config.host)}
 											</option>
 										),
 								)}
@@ -194,30 +197,26 @@ export function DirectoryPicker({
 						className="input mono"
 						value={input}
 						onChange={(event) => setInput(event.target.value)}
-						aria-label="Directory"
+						aria-label={t("picker_directory_aria")}
 						autoCapitalize="off"
 						autoCorrect="off"
 						spellCheck={false}
 						disabled={loading}
 					/>
 				</form>
-				{sandbox && (
-					<p className="muted small directory-note">
-						Tools of this session run in the {env} VM and can't leave it. Only you can move the session out.
-					</p>
-				)}
+				{sandbox && <p className="muted small directory-note">{t("picker_locked_note", env ?? "")}</p>}
 				{listing &&
 					(leaves && leaving === target ? (
 						<div className="notice env-test directory-leave" role="alert">
 							<p>
-								<strong>Leave sandbox {moving?.env}?</strong>
+								<strong>{t("picker_leave_title", moving?.env ?? "")}</strong>
 							</p>
 							<p>
 								{sandbox
-									? `Moving to ${locationLabel(env, listing.path)} gives this session's tools sandbox ${env}'s folders and allowed hosts instead.`
-									: `Moving to ${locationLabel(env, listing.path)} lets this session's tools run directly on ${env ?? "this device"}, with its full network access and files.`}
+									? t("picker_leave_sandbox", locationLabel(env, listing.path))
+									: t("picker_leave_host", locationLabel(env, listing.path))}
 							</p>
-							<p className="muted small">Files written in the sandbox stay in its folders.</p>
+							<p className="muted small">{t("picker_files_kept")}</p>
 							<div className="inline-form">
 								<button
 									type="button"
@@ -225,10 +224,10 @@ export function DirectoryPicker({
 									disabled={loading}
 									onClick={() => onChange(env, listing.path)}
 								>
-									Move out
+									{t("picker_move_out")}
 								</button>
 								<button type="button" className="button" onClick={() => setLeaving(undefined)}>
-									Cancel
+									{t("cancel")}
 								</button>
 							</div>
 						</div>
@@ -245,8 +244,7 @@ export function DirectoryPicker({
 					))}
 				{moves && (
 					<p className="muted small directory-note">
-						Tools will run {env === null ? "on this device" : `on ${env}`}. The history stays; files are not
-						copied.
+						{t("picker_run_note", env === null ? t("picker_on_device") : ` ${env}`)}
 					</p>
 				)}
 			</div>
@@ -254,7 +252,7 @@ export function DirectoryPicker({
 			{loading && !listing && (
 				<div className="directory-loading">
 					<div className="spinner" />
-					<span>{env ? `Connecting to ${env}…` : "Loading…"}</span>
+					<span>{env ? t("picker_connecting", env) : t("picker_loading")}</span>
 				</div>
 			)}
 			{listing && (
@@ -262,7 +260,7 @@ export function DirectoryPicker({
 					{loading && (
 						<div className="directory-loading">
 							<div className="spinner" />
-							<span>Loading…</span>
+							<span>{t("picker_loading")}</span>
 						</div>
 					)}
 					{listing.parent && (
@@ -285,13 +283,13 @@ export function DirectoryPicker({
 							<ChevronIcon />
 						</button>
 					))}
-					{!listing.directories.length && <p className="empty-note">No subdirectories.</p>}
-					{listing.truncated && <p className="muted small">Showing the first 1,000 directories.</p>}
+					{!listing.directories.length && <p className="empty-note">{t("picker_no_subdirs")}</p>}
+					{listing.truncated && <p className="muted small">{t("picker_truncated")}</p>}
 				</div>
 			)}
 			{recent(env).length > 0 && (
 				<div className="list">
-					<span className="label">Recent</span>
+					<span className="label">{t("picker_recent")}</span>
 					{recent(env)
 						.slice(0, 8)
 						.map((path) => (

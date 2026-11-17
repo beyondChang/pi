@@ -6,7 +6,13 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import { homedir } from "node:os";
 import { join, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { isChordError, localeChoiceFacet, type PluginFacet, webSocketLink } from "@earendil-works/chord";
+import {
+	isChordError,
+	localeChoiceFacet,
+	type PluginFacet,
+	translationsFacet,
+	webSocketLink,
+} from "@earendil-works/chord";
 import { filesFacet } from "@earendil-works/chord/app/files";
 import { nodeCompression } from "@earendil-works/chord/compression";
 import { BACKGROUND_CONTEXT } from "@earendil-works/chord/context";
@@ -402,6 +408,8 @@ export async function startServer(options: ServerOptions = {}): Promise<P2Server
 						}),
 					},
 					{ name: "@p2/tui-preferences", facet: tuiPreferencesFacet(dataDir) },
+					// The composed message catalogs plugins contribute, followed by pages and terminals.
+					{ name: "chord.translations", facet: translationsFacet<P2Principal>() },
 					// The server's files (the kit's `Files`): `<data>/server/files/`.
 					{ name: "chord.app.files", facet: filesFacet(hostFiles(serverDirectory(dataDir))) },
 					// The pages' code, and the user's locale pick that a page's language follows (Chord's page holds it).

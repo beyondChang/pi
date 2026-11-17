@@ -15,6 +15,7 @@ import {
 	plainReferences,
 	renameReferences,
 	serveKeyed,
+	Translations,
 	UI_LINGER,
 	whenLive,
 } from "@p2/app/v1";
@@ -101,6 +102,7 @@ import {
 	useFileCompletion,
 	useHost,
 	useLongPress,
+	useMessages,
 	useNavigation,
 	useNewSessionState,
 	useObject,
@@ -144,6 +146,7 @@ import { SessionTree } from "../tree/contract.ts";
 import { configure, MODEL_COMMANDS, MODEL_PAGES } from "./commands.tsx";
 import { Chat, ChatCosts, conversationTargetId, TranscriptEntries } from "./contract.ts";
 import { DraftEditor } from "./draft-editor.tsx";
+import { messages } from "./messages.ts";
 import { isDefaultChoice, newSessionChoice, thinkingLevelOf } from "./model-choice.ts";
 import { useModelScreen } from "./model-screens.ts";
 import { type Outgoing, outboxOf } from "./outbox.ts";
@@ -331,6 +334,7 @@ function ModelControls({
 	target: CommandTarget | undefined;
 	onDefault: (choice: ModelChoice) => void;
 }) {
+	const { t } = useMessages(messages);
 	const name = choice ? modelName(resources, choice.model) : "Choose model";
 	// A model without adjustable thinking has no thinking link.
 	const level = choice && thinkingLevels(resources, choice.model).length > 1 ? choice.thinkingLevel : undefined;
@@ -341,7 +345,7 @@ function ModelControls({
 			<button
 				type="button"
 				className="model-control footer-action"
-				aria-label="Model"
+				aria-label={t("model")}
 				title={name}
 				onClick={() => openCommandPage("models", target)}
 				disabled={disabled}
@@ -356,7 +360,7 @@ function ModelControls({
 					<button
 						type="button"
 						className="thinking-control footer-action"
-						aria-label="Thinking level"
+						aria-label={t("thinking_level")}
 						title={`Thinking: ${level}`}
 						onClick={() => openCommandPage("thinking", target)}
 						disabled={disabled}
@@ -369,8 +373,8 @@ function ModelControls({
 				<button
 					type="button"
 					className="default-control"
-					aria-label="Make default for new sessions"
-					title={`Make ${described} the default for new sessions`}
+					aria-label={t("make_default")}
+					title={t("make_default_title", described)}
 					onClick={() => onDefault(choice)}
 				>
 					<StarIcon size={13} />
@@ -415,6 +419,7 @@ function Composer({
 	inputRef?: React.RefObject<DraftInput | null>;
 	children?: React.ReactNode;
 }) {
+	const { t } = useMessages(messages);
 	// The draft straight from the app's composer state, not through the screen's dock content: that arrives a layout
 	// effect after a keystroke, so the input rendered the previous text first, which put the caret at the end on every
 	// keystroke and broke a phone keyboard's composition (its first tap on Send only closed the keyboard).
@@ -455,7 +460,7 @@ function Composer({
 					<span>
 						Replying to <strong>{replying.name}</strong>
 					</span>
-					<button type="button" aria-label="Cancel reply" onClick={replying.onCancel}>
+					<button type="button" aria-label={t("cancel_reply")} onClick={replying.onCancel}>
 						<CloseIcon />
 					</button>
 				</div>
@@ -467,7 +472,7 @@ function Composer({
 				files={files}
 				register={registerInput}
 				{...(inputRef ? { inputRef } : {})}
-				placeholder={busy ? "Steer the current run…" : "Message Pi…"}
+				placeholder={busy ? t("placeholder_steer") : t("placeholder_message")}
 				onEdit={() => completion?.update()}
 				onPaste={(event) => {
 					if (!attaching) return;
@@ -497,7 +502,7 @@ function Composer({
 			/>
 			<div className="composer-bar">
 				{attaching && (
-					<label className="round attach" aria-label="Attach files" title="Attach files">
+					<label className="round attach" aria-label={t("attach_files")} title={t("attach_files")}>
 						<PlusIcon />
 						<input
 							type="file"
@@ -513,7 +518,7 @@ function Composer({
 				{children}
 				<span className="spacer" />
 				{busy && onStop && (
-					<button type="button" className="round stop" aria-label="Stop" onClick={onStop}>
+					<button type="button" className="round stop" aria-label={t("stop")} onClick={onStop}>
 						<StopIcon />
 					</button>
 				)}
@@ -532,7 +537,7 @@ function Composer({
 					>
 						<Menu.Portal>
 							<Menu.Positioner className="send-menu" anchor={sendButton} side="top" align="end" sideOffset={4}>
-								<Menu.Popup ref={popup} className="send-options" aria-label="Ways to send">
+								<Menu.Popup ref={popup} className="send-options" aria-label={t("ways_to_send")}>
 									{choices.map((choice, index) => (
 										<Menu.Item
 											key={choice.label}
@@ -562,7 +567,7 @@ function Composer({
 						ref={sendButton}
 						type="submit"
 						className="round send"
-						aria-label="Send"
+						aria-label={t("send")}
 						title={choices ? `${send.label} (long press for more)` : send.label}
 						disabled={!content || disabled}
 						{...(choices ? { "aria-haspopup": "menu" as const, "aria-expanded": choosing } : {})}
@@ -715,6 +720,7 @@ function TopBar({
 	/** The session is being moved (a relocation job runs). */
 	moving?: boolean;
 }) {
+	const { t } = useMessages(messages);
 	const offline = useOffline();
 	// Only the owner reads environments (`PageObjects.envs`): guests see the location without the sandbox lock.
 	const objects = usePageObjects();
@@ -737,7 +743,12 @@ function TopBar({
 	);
 	return (
 		<header className="topbar">
-			<button type="button" className="icon-button menu sidebar-open" onClick={openSidebar} aria-label="Sessions">
+			<button
+				type="button"
+				className="icon-button menu sidebar-open"
+				onClick={openSidebar}
+				aria-label={t("sessions")}
+			>
 				<MenuIcon />
 				<Slot name="menu-badge" />
 			</button>
@@ -754,7 +765,7 @@ function TopBar({
 					</>
 				) : (
 					<>
-						<h1>{session?.title ?? "New session"}</h1>
+						<h1>{session?.title ?? t("new_session")}</h1>
 						{session &&
 							(owner ? (
 								<button
@@ -782,7 +793,7 @@ function TopBar({
 					</>
 				)}
 			</div>
-			{offline && <span className="offline">Offline</span>}
+			{offline && <span className="offline">{t("offline")}</span>}
 			<Slot name="view-actions" />
 			<Slot name="artifact-actions" />
 			<Slot name="terminal-actions" />
@@ -872,6 +883,7 @@ function viewTarget(
 }
 
 function SessionChat({ sessionId, conversationId }: { sessionId: string; conversationId: number }) {
+	const { t } = useMessages(messages);
 	const nav = useNavigation();
 	const openConversation = useCallback(
 		(conversation: number) => {
@@ -919,10 +931,10 @@ function SessionChat({ sessionId, conversationId }: { sessionId: string; convers
 		if (listed && (!session || session.archivedAt !== null) && current.session === sessionId) {
 			// What this device kept of a session the server no longer has goes with it (an archived one stays).
 			if (!session) void forgetSession(sessionId);
-			toast(session ? "Session is archived" : "Session not found");
+			toast(session ? t("archived_toast") : t("not_found_toast"));
 			void nav.replace(NEW_SESSION, current);
 		}
-	}, [listed, session, nav, sessionId, toast]);
+	}, [listed, session, nav, sessionId, toast, t]);
 	// Who this browser is, as the server last said: kept while reconnecting (`useOwner`), so the composer stays.
 	const { access } = objects;
 	const liveGrant = useReadable(liveIn(access, "guest")?.grant);
@@ -1473,7 +1485,7 @@ function SessionChat({ sessionId, conversationId }: { sessionId: string; convers
 		/>
 	);
 	const toBottom = !follow.atBottom && (
-		<button type="button" className="to-bottom" onClick={follow.toBottom} aria-label="Scroll to bottom">
+		<button type="button" className="to-bottom" onClick={follow.toBottom} aria-label={t("scroll_bottom")}>
 			<DownIcon />
 		</button>
 	);
@@ -1494,9 +1506,7 @@ function SessionChat({ sessionId, conversationId }: { sessionId: string; convers
 					<button
 						type="button"
 						className="text-action"
-						title={
-							archived ? "Show it in the sidebar again" : "Stop it and move it to the sidebar's archived row"
-						}
+						title={archived ? t("show_again") : t("stop_archive")}
 						onClick={() =>
 							archive(!archived, () =>
 								subagentControl.archive(
@@ -1510,7 +1520,7 @@ function SessionChat({ sessionId, conversationId }: { sessionId: string; convers
 					</button>
 				)}
 				{canWrite && oneShot && busy && (
-					<button type="button" className="round stop" aria-label="Stop" onClick={stop}>
+					<button type="button" className="round stop" aria-label={t("stop")} onClick={stop}>
 						<StopIcon />
 					</button>
 				)}
@@ -1519,7 +1529,9 @@ function SessionChat({ sessionId, conversationId }: { sessionId: string; convers
 	);
 	const readOnlyBar = (!canWrite || failure) && (
 		<div className="subagent-bar">
-			<span>{failure ? "Session unavailable" : grant ? `Joined as ${grant.name} · read-only` : "Connecting…"}</span>
+			<span>
+				{failure ? t("session_unavailable") : grant ? `Joined as ${grant.name} · read-only` : "Connecting…"}
+			</span>
 		</div>
 	);
 	const queuedRows = queued.length + pendingQueued.length > 0 && (
@@ -1529,7 +1541,7 @@ function SessionChat({ sessionId, conversationId }: { sessionId: string; convers
 					<button
 						type="button"
 						className="queue-edit"
-						title="Move back to editor"
+						title={t("queue_move_back")}
 						onClick={() => {
 							if (!outbox.take(message.id)) return;
 							restore([message.text], true);
@@ -1541,7 +1553,7 @@ function SessionChat({ sessionId, conversationId }: { sessionId: string; convers
 					<button
 						type="button"
 						className="queue-remove"
-						aria-label="Remove from queue"
+						aria-label={t("queue_remove")}
 						onClick={() => outbox.remove(message.id)}
 					>
 						<CloseIcon />
@@ -1553,7 +1565,7 @@ function SessionChat({ sessionId, conversationId }: { sessionId: string; convers
 					<button
 						type="button"
 						className="queue-edit"
-						title="Move back to editor"
+						title={t("queue_move_back")}
 						onClick={() =>
 							writer &&
 							dequeue(item.id, async () => {
@@ -1570,7 +1582,7 @@ function SessionChat({ sessionId, conversationId }: { sessionId: string; convers
 					<button
 						type="button"
 						className="queue-remove"
-						aria-label="Remove from queue"
+						aria-label={t("queue_remove")}
 						onClick={() =>
 							writer && dequeue(item.id, () => writer.dequeue({ submissionId: item.id }, BACKGROUND_CONTEXT))
 						}
@@ -1655,14 +1667,14 @@ function SessionChat({ sessionId, conversationId }: { sessionId: string; convers
 				<div className="scroller transcript" ref={follow.scroller}>
 					{failure && connected ? (
 						<div className="hero worker-start-error">
-							<h2>Session unavailable</h2>
+							<h2>{t("session_unavailable")}</h2>
 							<p className="error" role="alert">
 								{failure}
 							</p>
 							{owner ? (
 								<div className="actions">
 									<button type="button" className="button" disabled={retrying} onClick={() => void retry()}>
-										{retrying ? "Retrying…" : "Retry"}
+										{retrying ? t("retrying") : t("retry")}
 									</button>
 									<button
 										type="button"
@@ -1671,11 +1683,11 @@ function SessionChat({ sessionId, conversationId }: { sessionId: string; convers
 											openLayer({ kind: "sheet", name: "logs", locator: `session:${sessionId}` })
 										}
 									>
-										Show logs
+										{t("show_logs")}
 									</button>
 								</div>
 							) : (
-								<p className="muted">Ask the owner to retry this session.</p>
+								<p className="muted">{t("ask_owner_retry")}</p>
 							)}
 						</div>
 					) : shown ? (
@@ -1723,7 +1735,7 @@ function SessionChat({ sessionId, conversationId }: { sessionId: string; convers
 							</SessionId.Provider>
 						) : (
 							<div className="hero small-hero">
-								<p className="muted">Send a message to start.</p>
+								<p className="muted">{t("send_to_start")}</p>
 							</div>
 						)
 					) : (
@@ -1741,6 +1753,7 @@ function SessionChat({ sessionId, conversationId }: { sessionId: string; convers
 const NEW_SESSION_TARGET: CommandTarget = { type: "new-session", id: "new", kind: "New session", label: "" };
 
 function NewSession() {
+	const { t } = useMessages(messages);
 	const connected = useConnected();
 	const host = useHost();
 	const owner = useOwner();
@@ -1934,7 +1947,7 @@ function NewSession() {
 						<div className="hero">
 							<div className="hero-title">
 								<PiLogo />
-								<h2>What should Pi do?</h2>
+								<h2>{t("hero_title")}</h2>
 							</div>
 							<button
 								type="button"
@@ -1952,7 +1965,7 @@ function NewSession() {
 									className="button"
 									onClick={() => openLayer({ kind: "sheet", name: "providers" })}
 								>
-									Sign in to a provider
+									{t("sign_in_provider")}
 								</button>
 							)}
 						</div>
@@ -1965,12 +1978,13 @@ function NewSession() {
 
 /** A guest's share ended: Pi Mobile clears the view and says so in its toast; nothing reconnects. */
 function ShareEnded() {
+	const { t } = useMessages(messages);
 	const place = useChatScreen(undefined);
 	return (
 		<>
 			<TopBar />
 			<button type="button" className="toast">
-				This share has ended.
+				{t("share_ended")}
 			</button>
 			{place(<div className="scroller" />)}
 		</>
@@ -2044,6 +2058,7 @@ function Main() {
 export default defineFacet((host, self) => {
 	// The chat plugin defines the transcript's entry displays (chat-mode adds its own): served on the page too.
 	serveKeyed(host, TranscriptEntries);
+	self.contribute(Translations, messages.translations);
 	self.contribute(Slots, { main: Main });
 	self.contribute(Commands, MODEL_COMMANDS);
 	self.contribute(CommandPages, MODEL_PAGES);

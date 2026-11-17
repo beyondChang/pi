@@ -11,6 +11,7 @@ import {
 	keptIn,
 	LOCAL,
 	liveIn,
+	Translations,
 	whenLive,
 } from "@p2/app/v1";
 import {
@@ -32,6 +33,7 @@ import {
 	useComposerState,
 	useConnected,
 	useHost,
+	useMessages,
 	useNavigation,
 	useObject,
 	useOptimisticCall,
@@ -53,6 +55,7 @@ import { BRANCH_SHEET, BranchSheet, branchOf } from "./BranchSheet.tsx";
 import { SESSION_COMMANDS, SESSION_PAGES, SESSION_SEARCH } from "./commands.tsx";
 import { type Operation, type Session, Sessions, SidebarSettings, type SidebarWindow } from "./contract.ts";
 import { type DrawerRows, DrawerRowsContext } from "./contract.web.tsx";
+import { messages } from "./messages.ts";
 import { SessionSheet } from "./SessionSheet.tsx";
 import { customKey, customRollup } from "./sidebar/custom.ts";
 import { ListPage } from "./sidebar/ListPage.tsx";
@@ -675,6 +678,7 @@ function MenuBadge() {
 
 /** The top bar's button that opens the Session sheet (the drawer renders the sheet, where the rows are). */
 function SessionOptions() {
+	const { t } = useMessages(messages);
 	const route = useRoute();
 	const rows = useReadable(useObject(Sessions, {}, { variant: "owner" })?.sessions);
 	const session = rows?.find((row) => row.id === route.session);
@@ -683,7 +687,7 @@ function SessionOptions() {
 		<button
 			type="button"
 			className="icon-button"
-			aria-label="Session options"
+			aria-label={t("session_options")}
 			onClick={() => openLayer({ kind: "sheet", name: "session" })}
 		>
 			<MoreIcon />
@@ -693,6 +697,7 @@ function SessionOptions() {
 
 export default defineFacet((host) => {
 	contribute(host, "p2.web-sessions", (self) => {
+		self.contribute(Translations, messages.translations);
 		self.contribute(Slots, {
 			sidebar: Sidebar,
 			page: SectionPage,

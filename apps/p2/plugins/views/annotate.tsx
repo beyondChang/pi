@@ -2,11 +2,12 @@
 // any pane (the transcript included); drawings shown over their panes; and the quoted text of comments and removals
 // highlighted where the panes show it (CSS custom highlights: the page's DOM stays as React made it).
 import { BACKGROUND_CONTEXT, type RefIn } from "@p2/app/v1";
-import { CloseIcon, CommentIcon, PencilIcon, useComposerState } from "@p2/app/v1/web";
+import { CloseIcon, CommentIcon, PencilIcon, useComposerState, useMessages } from "@p2/app/v1/web";
 import { type FormEvent, type RefObject, useEffect, useRef, useState } from "react";
 import { type Annotation, type AnnotationInput, TRANSCRIPT, type View, type Views } from "./contract.ts";
 import { frameHandles, noteSelection, takeSelection } from "./kinds.ts";
 import { setAnnotateMode, useAnnotateMode } from "./layout-store.ts";
+import { messages } from "./messages.ts";
 
 type Editor = RefIn<typeof Views, "editor">;
 type Point = { x: number; y: number };
@@ -26,6 +27,7 @@ export function AnnotationLayer({
 	views: readonly View[];
 	editor: Editor | undefined;
 }) {
+	const { t } = useMessages(messages);
 	const mode = useAnnotateMode();
 	const { fail } = useComposerState();
 	const [hint, setHint] = useState<string>();
@@ -59,7 +61,7 @@ export function AnnotationLayer({
 		const reported = takeSelection();
 		const selected = pageSelection(container.current) ?? reported;
 		if (!selected) {
-			setHint("Select text in the transcript or a view first.");
+			setHint(t("select_hint"));
 			return;
 		}
 		setHint(undefined);
@@ -132,7 +134,7 @@ export function AnnotationLayer({
 				<svg
 					className="views-ink-input"
 					role="img"
-					aria-label="Drawing surface"
+					aria-label={t("drawing_surface")}
 					onPointerDown={(event) => {
 						event.preventDefault();
 						event.currentTarget.setPointerCapture(event.pointerId);
@@ -165,16 +167,16 @@ export function AnnotationLayer({
 					))}
 				</svg>
 			)}
-			<div className="views-annotate-bar" role="toolbar" aria-label="Annotate">
+			<div className="views-annotate-bar" role="toolbar" aria-label={t("annotate_aria")}>
 				{editor ? (
 					<>
 						<button type="button" onPointerDown={keepSelection} onClick={() => mark("comment")}>
 							<CommentIcon />
-							<span>Comment</span>
+							<span>{t("comment")}</span>
 						</button>
 						<button type="button" onPointerDown={keepSelection} onClick={() => mark("delete")}>
 							<span className="views-strike">abc</span>
-							<span>Remove</span>
+							<span>{t("remove")}</span>
 						</button>
 						<button
 							type="button"
@@ -183,27 +185,27 @@ export function AnnotationLayer({
 							onClick={() => setAnnotateMode(mode === "draw" ? "text" : "draw")}
 						>
 							<PencilIcon />
-							<span>Draw</span>
+							<span>{t("draw")}</span>
 						</button>
 					</>
 				) : (
-					<span className="muted">Only people who may send here annotate.</span>
+					<span className="muted">{t("editor_only")}</span>
 				)}
 				<button type="button" aria-expanded={listOpen} onClick={() => setListOpen(!listOpen)}>
-					<span>Notes {annotations.length ? `(${annotations.length})` : ""}</span>
+					<span>{t("notes", annotations.length)}</span>
 				</button>
 				<button type="button" onClick={() => setAnnotateMode("off")}>
-					<span>Done</span>
+					<span>{t("done")}</span>
 				</button>
 				{hint && <p className="views-annotate-hint">{hint}</p>}
 				{comment && (
 					<form className="views-comment" onSubmit={saveComment}>
-						<p className="muted">On {excerpt(comment.quote)}</p>
+						<p className="muted">{t("on_quote", excerpt(comment.quote))}</p>
 						<textarea
 							// biome-ignore lint/a11y/noAutofocus: the comment box opens for typing.
 							autoFocus
 							value={note}
-							placeholder="Comment"
+							placeholder={t("comment_placeholder")}
 							rows={2}
 							onChange={(event) => setNote(event.target.value)}
 							onKeyDown={(event) => {
@@ -213,10 +215,10 @@ export function AnnotationLayer({
 						/>
 						<div className="views-comment-actions">
 							<button type="button" className="text-action" onClick={() => setComment(undefined)}>
-								Cancel
+								{t("cancel")}
 							</button>
 							<button type="submit" className="text-action" disabled={!note.trim()}>
-								Save
+								{t("save")}
 							</button>
 						</div>
 					</form>
@@ -238,20 +240,21 @@ function NotesList({
 	editor: Editor | undefined;
 }) {
 	const { fail } = useComposerState();
+	const { t } = useMessages(messages);
 	const remove = (ids?: string[]) => editor?.unannotate(ids ? { ids } : {}, BACKGROUND_CONTEXT).catch(fail);
-	if (!annotations.length) return <p className="views-notes empty-note">No annotations.</p>;
+	if (!annotations.length) return <p className="views-notes empty-note">{t("no_annotations")}</p>;
 	return (
 		<div className="views-notes">
 			<ul>
 				{annotations.map((annotation) => (
 					<li key={annotation.id}>
 						<div>
-							<strong>{KIND_WORDS[annotation.kind]}</strong>{" "}
+							<strong>{t(kindKey(annotation.kind))}</strong>{" "}
 							<span className="muted">
 								{annotation.view === TRANSCRIPT
-									? "Chat"
+									? t("transcript")
 									: (views.find((view) => view.id === annotation.view)?.title ?? annotation.view)}
-								{annotation.sent ? " · sent" : ""}
+								{annotation.sent ? ` · ${t("sent")}` : ""}
 							</span>
 							{(annotation.quote || annotation.under || annotation.note) && (
 								<p>
@@ -266,7 +269,7 @@ function NotesList({
 							<button
 								type="button"
 								className="icon-button"
-								aria-label="Remove note"
+								aria-label={t("remove_note")}
 								onClick={() => remove([annotation.id])}
 							>
 								<CloseIcon />
@@ -277,14 +280,20 @@ function NotesList({
 			</ul>
 			{editor && (
 				<button type="button" className="text-action" onClick={() => remove()}>
-					Clear all
+					{t("clear_all")}
 				</button>
 			)}
 		</div>
 	);
 }
 
-const KIND_WORDS: Record<Annotation["kind"], string> = { comment: "Comment", delete: "Remove", ink: "Drawing" };
+const KIND_KEYS: Record<Annotation["kind"], "kind_comment" | "kind_delete" | "kind_ink"> = {
+	comment: "kind_comment",
+	delete: "kind_delete",
+	ink: "kind_ink",
+};
+
+const kindKey = (kind: Annotation["kind"]): "kind_comment" | "kind_delete" | "kind_ink" => KIND_KEYS[kind];
 
 /** A pane's drawings, over it (they stretch with the pane). */
 export function InkLayer({ annotations }: { annotations: readonly Annotation[] }) {

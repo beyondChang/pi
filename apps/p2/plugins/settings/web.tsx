@@ -11,6 +11,7 @@ import {
 	type Held,
 	MAX_SERVER_NAME_LENGTH,
 	ServerNameSettings,
+	Translations,
 } from "@p2/app/v1";
 import {
 	CommandPages,
@@ -26,6 +27,7 @@ import {
 	Slots,
 	Switch,
 	showSettingsSection,
+	useMessages,
 	useObject,
 	useOptimisticCall,
 	useOwner,
@@ -38,6 +40,7 @@ import { createContext, type ReactNode, useCallback, useContext, useEffect, useI
 import { Models } from "../models/contract.ts";
 import { SETTINGS_COMMANDS, SETTINGS_PAGES, SETTINGS_SEARCH } from "./commands.tsx";
 import { type MobileSettings, Settings } from "./contract.ts";
+import { messages } from "./messages.ts";
 import { OWN_SECTIONS, type OwnSection } from "./sections.ts";
 import "./settings.css";
 
@@ -49,10 +52,7 @@ type Compaction = NonNullable<MobileSettings["compaction"]>;
 
 const DETAILS = [1, 2, 3, 4] as const;
 const THINKING_LEVELS = ["off", "minimal", "low", "medium", "high", "xhigh", "max"] as const;
-const QUEUE_MODES = [
-	{ value: "one-at-a-time", label: "One at a time" },
-	{ value: "all", label: "All at once" },
-] as const;
+const QUEUE_MODES = ["one-at-a-time", "all"] as const;
 const NO_AUTOCORRECT = { autoCapitalize: "off", autoCorrect: "off", spellCheck: false } as const;
 
 /**
@@ -89,6 +89,7 @@ function listenForMenuSettings(): () => void {
 
 function GearButton() {
 	const owner = useOwner();
+	const { t } = useMessages(messages);
 	const open = useSettingsSection() !== undefined;
 	const settings = useObject(Settings, owner ? {} : undefined);
 	const serverName = useObject(ServerNameSettings, owner ? {} : undefined);
@@ -101,8 +102,8 @@ function GearButton() {
 				type="button"
 				className="icon-button settings-open"
 				onClick={() => openSettings()}
-				aria-label="Settings"
-				title="Settings"
+				aria-label={t("window_title")}
+				title={t("window_title")}
 			>
 				<SettingsIcon />
 			</button>
@@ -116,6 +117,7 @@ function GearButton() {
  * show the list until a section is chosen, then the section with a Back to the list.
  */
 function SettingsWindow() {
+	const { t } = useMessages(messages);
 	const section = useSettingsSection();
 	const sections = useSettingsSections();
 	const wide = useWide();
@@ -125,8 +127,12 @@ function SettingsWindow() {
 			: undefined;
 	const list = section?.kind === "own" && own === undefined;
 	return (
-		<ModalSheet title="Settings" onClose={closeLayers} className={`settings-window ${list ? "shows-list" : ""}`}>
-			<nav className="settings-nav" aria-label="Settings sections">
+		<ModalSheet
+			title={t("window_title")}
+			onClose={closeLayers}
+			className={`settings-window ${list ? "shows-list" : ""}`}
+		>
+			<nav className="settings-nav" aria-label={t("sections_label")}>
 				{OWN_SECTIONS.map((entry) => (
 					<button
 						key={entry.id}
@@ -135,7 +141,7 @@ function SettingsWindow() {
 						aria-current={own === entry.id ? "page" : undefined}
 						onClick={() => showSettingsSection({ locator: entry.id }, wide)}
 					>
-						{entry.label}
+						{t(entry.label)}
 					</button>
 				))}
 				<hr className="settings-nav-break" />
@@ -152,14 +158,15 @@ function SettingsWindow() {
 
 /** One of the window's own sections: its settings.json fields, as a page of the window. */
 function SettingsSection({ id }: { id: OwnSection }) {
+	const { t } = useMessages(messages);
 	const service = useContext(HeldSettings).settings;
 	const models = useReadable(useObject(Models, {})?.models);
 	const loaded = useReadable(service?.settings);
 	const fileError = useReadable(service?.error);
 	const [error, setError] = useState<string>();
 	const onError = useCallback(
-		(reason: unknown) => setError(reason instanceof Error ? reason.message : "Could not save the settings"),
-		[],
+		(reason: unknown) => setError(reason instanceof Error ? reason.message : t("save_failed")),
+		[t],
 	);
 	const [settings, guess] = useOptimisticCall<MobileSettings | undefined, Change>(
 		loaded,
@@ -174,11 +181,15 @@ function SettingsSection({ id }: { id: OwnSection }) {
 		const unset = entries.filter(([, value]) => value === undefined).map(([key]) => key);
 		guess(change, () => service.update({ set, unset }, BACKGROUND_CONTEXT));
 	};
-	const title = OWN_SECTIONS.find((entry) => entry.id === id)?.label ?? "Settings";
+	const queueOptions = QUEUE_MODES.map((mode) => ({
+		value: mode,
+		label: mode === "all" ? t("queue_all") : t("queue_one"),
+	}));
+	const title = t(OWN_SECTIONS.find((entry) => entry.id === id)?.label ?? "window_title");
 	if (!settings)
 		return (
 			<Sheet title={title} onClose={closeLayers}>
-				<output className="muted">Loading settings…</output>
+				<output className="muted">{t("loading_settings")}</output>
 			</Sheet>
 		);
 	const stream = (change: Stream) => save({ stream: patched(settings.stream, change) });
@@ -195,28 +206,25 @@ function SettingsSection({ id }: { id: OwnSection }) {
 	const fields: Record<OwnSection, ReactNode> = {
 		general: (
 			<>
-				<p className="muted small">
-					This server's settings.json, used by every conversation. Changes apply at once; a request already running
-					keeps the settings it started with.
-				</p>
+				<p className="muted small">{t("general_description")}</p>
 
 				<ServerNameSetting onError={onError} />
 				<TextSetting
-					label="Your name on your messages"
+					label={t("owner_name_label")}
 					value={settings.ownerName ?? ""}
-					placeholder="Owner"
+					placeholder={t("owner_name_placeholder")}
 					maxLength={40}
 					onSave={(text) => save({ ownerName: text.trim() ? text : undefined })}
 				/>
 				<Choice
-					label="Chat detail"
+					label={t("detail_label")}
 					value={settings.detail === undefined ? undefined : String(settings.detail)}
-					fallback="texts, thinking and calls on wheels (2)"
+					fallback={t("detail_fallback")}
 					options={[
-						{ value: "1", label: "1: only the answer, the rest on one wheel" },
-						{ value: "2", label: "2: texts, thinking and calls on wheels" },
-						{ value: "3", label: "3: thinking too (collapsed), calls on wheels" },
-						{ value: "4", label: "4: everything, each call as a row" },
+						{ value: "1", label: t("detail_1") },
+						{ value: "2", label: t("detail_2") },
+						{ value: "3", label: t("detail_3") },
+						{ value: "4", label: t("detail_4") },
 					]}
 					onChange={(value) => save({ detail: DETAILS.find((detail) => String(detail) === value) })}
 				/>
@@ -224,12 +232,12 @@ function SettingsSection({ id }: { id: OwnSection }) {
 		),
 		models: (
 			<>
-				<p className="muted small">What a new session starts with; each session then keeps its own model.</p>
+				<p className="muted small">{t("models_description")}</p>
 
 				<Choice
-					label="Default model"
+					label={t("default_model_label")}
 					value={defaultModel}
-					fallback="The first signed-in model"
+					fallback={t("default_model_fallback")}
 					options={modelOptions}
 					onChange={(value) => {
 						const slash = value?.indexOf("/") ?? -1;
@@ -242,16 +250,16 @@ function SettingsSection({ id }: { id: OwnSection }) {
 					}}
 				/>
 				<Choice
-					label="Thinking level"
+					label={t("thinking_level_label")}
 					value={settings.thinkingLevel}
-					fallback="high"
+					fallback={t("thinking_level_fallback")}
 					options={THINKING_LEVELS.map((level) => ({ value: level, label: level }))}
 					onChange={(value) => save({ thinkingLevel: THINKING_LEVELS.find((level) => level === value) })}
 				/>
 				<TextSetting
-					label="Models for cycling in the TUI (one pattern per line)"
+					label={t("enabled_models_label")}
 					value={(settings.enabledModels ?? []).join("\n")}
-					placeholder="All models"
+					placeholder={t("enabled_models_placeholder")}
 					rows={3}
 					mono
 					onSave={(text) => {
@@ -267,44 +275,44 @@ function SettingsSection({ id }: { id: OwnSection }) {
 		agent: (
 			<>
 				<Switch
-					label="Code mode (scripts that call the other tools)"
+					label={t("codemode_label")}
 					checked={settings.codemode ?? true}
 					onChange={(checked) => save({ codemode: checked ? undefined : false })}
 				/>
 				<Choice
-					label="Tool calls"
+					label={t("tool_calls_label")}
 					value={settings.toolExecution}
-					fallback="In parallel"
+					fallback={t("tool_calls_fallback")}
 					options={[
-						{ value: "parallel", label: "In parallel" },
-						{ value: "sequential", label: "One after another" },
+						{ value: "parallel", label: t("tool_parallel") },
+						{ value: "sequential", label: t("tool_sequential") },
 					]}
 					onChange={(value) =>
 						save({ toolExecution: value === "parallel" || value === "sequential" ? value : undefined })
 					}
 				/>
 				<Choice
-					label="Messages sent while it works (steering)"
+					label={t("steering_label")}
 					value={settings.steeringMode}
-					fallback="One at a time"
-					options={QUEUE_MODES}
-					onChange={(value) => save({ steeringMode: QUEUE_MODES.find((mode) => mode.value === value)?.value })}
+					fallback={t("queue_fallback")}
+					options={queueOptions}
+					onChange={(value) => save({ steeringMode: QUEUE_MODES.find((mode) => mode === value) })}
 				/>
 				<Choice
-					label="Follow-up messages"
+					label={t("follow_up_label")}
 					value={settings.followUpMode}
-					fallback="One at a time"
-					options={QUEUE_MODES}
-					onChange={(value) => save({ followUpMode: QUEUE_MODES.find((mode) => mode.value === value)?.value })}
+					fallback={t("queue_fallback")}
+					options={queueOptions}
+					onChange={(value) => save({ followUpMode: QUEUE_MODES.find((mode) => mode === value) })}
 				/>
 				<Choice
-					label="Cache warming"
+					label={t("cache_warming_label")}
 					value={settings.cacheWarming}
-					fallback="While streaming and 30 minutes after"
+					fallback={t("cache_warming_fallback")}
 					options={[
-						{ value: "idle", label: "While streaming and 30 minutes after" },
-						{ value: "streaming", label: "Only while streaming" },
-						{ value: "off", label: "Off" },
+						{ value: "idle", label: t("cache_idle") },
+						{ value: "streaming", label: t("cache_streaming") },
+						{ value: "off", label: t("cache_off") },
 					]}
 					onChange={(value) =>
 						save({
@@ -317,13 +325,13 @@ function SettingsSection({ id }: { id: OwnSection }) {
 		requests: (
 			<>
 				<Choice
-					label="Transport"
+					label={t("transport_label")}
 					value={settings.stream?.transport}
-					fallback="Automatic"
+					fallback={t("transport_fallback")}
 					options={[
-						{ value: "auto", label: "Automatic" },
-						{ value: "sse", label: "SSE" },
-						{ value: "websocket", label: "WebSocket" },
+						{ value: "auto", label: t("transport_auto") },
+						{ value: "sse", label: t("transport_sse") },
+						{ value: "websocket", label: t("transport_websocket") },
 					]}
 					onChange={(value) =>
 						stream({
@@ -332,13 +340,13 @@ function SettingsSection({ id }: { id: OwnSection }) {
 					}
 				/>
 				<Choice
-					label="Prompt cache retention"
+					label={t("cache_retention_label")}
 					value={settings.stream?.cacheRetention}
-					fallback="Provider default (short)"
+					fallback={t("cache_retention_fallback")}
 					options={[
-						{ value: "short", label: "Short (5 minutes)" },
-						{ value: "long", label: "Long (1 hour, twice the input price)" },
-						{ value: "none", label: "None" },
+						{ value: "short", label: t("cache_short") },
+						{ value: "long", label: t("cache_long") },
+						{ value: "none", label: t("cache_none") },
 					]}
 					onChange={(value) =>
 						stream({
@@ -347,45 +355,45 @@ function SettingsSection({ id }: { id: OwnSection }) {
 					}
 				/>
 				<NumberSetting
-					label="Request timeout (ms)"
+					label={t("request_timeout_label")}
 					value={settings.stream?.timeoutMs}
-					placeholder="Provider default"
+					placeholder={t("provider_default")}
 					min={1}
 					onSave={(timeoutMs) => stream({ timeoutMs })}
 				/>
 				<NumberSetting
-					label="Provider retries"
+					label={t("provider_retries_label")}
 					value={settings.stream?.maxRetries}
-					placeholder="Provider default"
+					placeholder={t("provider_default")}
 					onSave={(maxRetries) => stream({ maxRetries })}
 				/>
 				<NumberSetting
-					label="Longest provider retry delay (ms)"
+					label={t("retry_delay_label")}
 					value={settings.stream?.maxRetryDelayMs}
 					placeholder="60000"
 					onSave={(maxRetryDelayMs) => stream({ maxRetryDelayMs })}
 				/>
 
-				<Group title="Retries after a failed turn">
+				<Group title={t("retry_group_title")}>
 					<Switch
-						label="Retry failed turns"
+						label={t("retry_enabled_label")}
 						checked={settings.retry?.enabled ?? true}
 						onChange={(checked) => retry({ enabled: checked ? undefined : false })}
 					/>
 					<NumberSetting
-						label="Retries"
+						label={t("retry_count_label")}
 						value={settings.retry?.maxRetries}
 						placeholder="3"
 						onSave={(maxRetries) => retry({ maxRetries })}
 					/>
 					<NumberSetting
-						label="First delay (ms)"
+						label={t("retry_first_delay_label")}
 						value={settings.retry?.baseDelayMs}
 						placeholder="2000"
 						onSave={(baseDelayMs) => retry({ baseDelayMs })}
 					/>
 					<NumberSetting
-						label="Longest delay (ms)"
+						label={t("retry_max_delay_label")}
 						value={settings.retry?.maxAgentDelayMs}
 						placeholder="60000"
 						onSave={(maxAgentDelayMs) => retry({ maxAgentDelayMs })}
@@ -396,26 +404,26 @@ function SettingsSection({ id }: { id: OwnSection }) {
 		compaction: (
 			<>
 				<Switch
-					label="Compact long conversations"
+					label={t("compaction_enabled_label")}
 					checked={settings.compaction?.enabled ?? true}
 					onChange={(checked) => compaction({ enabled: checked ? undefined : false })}
 				/>
 				<NumberSetting
-					label="Tokens kept free for the answer"
+					label={t("reserve_tokens_label")}
 					value={settings.compaction?.reserveTokens}
 					placeholder="16384"
 					min={1}
 					onSave={(reserveTokens) => compaction({ reserveTokens })}
 				/>
 				<NumberSetting
-					label="Recent tokens kept as they are"
+					label={t("keep_recent_tokens_label")}
 					value={settings.compaction?.keepRecentTokens}
 					placeholder="20000"
 					min={1}
 					onSave={(keepRecentTokens) => compaction({ keepRecentTokens })}
 				/>
 				<NumberSetting
-					label="Tokens before compacting in the background"
+					label={t("background_tokens_label")}
 					value={settings.compaction?.backgroundTokens}
 					placeholder="32768"
 					onSave={(backgroundTokens) => compaction({ backgroundTokens })}
@@ -428,8 +436,7 @@ function SettingsSection({ id }: { id: OwnSection }) {
 			<div className="stack settings-fields">
 				{fileError && (
 					<p className="error" role="alert">
-						settings.json could not be loaded: this shows the last valid settings, and a change here replaces the
-						file with them.
+						{t("settings_load_error")}
 					</p>
 				)}
 				{error && (
@@ -448,6 +455,7 @@ function SettingsSection({ id }: { id: OwnSection }) {
  * placeholder, as of the server's start).
  */
 function ServerNameSetting({ onError }: { onError: (reason: unknown) => void }) {
+	const { t } = useMessages(messages);
 	const service = useContext(HeldSettings).serverName;
 	const loaded = useReadable(service?.chosen);
 	const device = useReadable(service?.device);
@@ -459,9 +467,9 @@ function ServerNameSetting({ onError }: { onError: (reason: unknown) => void }) 
 	if (!service || chosen === undefined) return null;
 	return (
 		<TextSetting
-			label="Server name"
+			label={t("server_name_label")}
 			value={chosen ?? ""}
-			placeholder={device ?? "This device's name"}
+			placeholder={device ?? t("server_name_device")}
 			maxLength={MAX_SERVER_NAME_LENGTH}
 			onSave={(text) => {
 				const name = text.trim() ? text.trim() : null;
@@ -494,6 +502,7 @@ function Choice({
 	options: readonly { value: string; label: string }[];
 	onChange: (value: string | undefined) => void;
 }) {
+	const { t } = useMessages(messages);
 	return (
 		<label className="field">
 			<span className="label">{label}</span>
@@ -502,7 +511,7 @@ function Choice({
 				value={value ?? ""}
 				onChange={(event) => onChange(event.target.value === "" ? undefined : event.target.value)}
 			>
-				<option value="">Default: {fallback}</option>
+				<option value="">{t("default_option", fallback)}</option>
 				{options.map((option) => (
 					<option key={option.value} value={option.value}>
 						{option.label}
@@ -608,6 +617,7 @@ function NumberSetting({
 
 export default defineFacet((host) => {
 	contribute(host, "p2.web-settings", (self) => {
+		self.contribute(Translations, messages.translations);
 		self.contribute(Slots, { "sidebar-actions:settings": GearButton });
 		self.contribute(Commands, SETTINGS_COMMANDS);
 		self.contribute(CommandPages, SETTINGS_PAGES);

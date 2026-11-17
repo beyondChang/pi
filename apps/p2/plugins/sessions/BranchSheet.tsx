@@ -1,9 +1,10 @@
 // The owner's sheet for a `/tree` branch's label (docs/tree.md): a new label, or for conversation 1 the session title.
 // A route layer, opened from the branch row's command menu ("Rename branch…").
 import { compile, int, str, tuple } from "@earendil-works/pi-schema";
-import { type CommandTarget, type Layer, Sheet } from "@p2/app/v1/web";
+import { type CommandTarget, type Layer, Sheet, useMessages } from "@p2/app/v1/web";
 import { useEffect, useRef, useState } from "react";
 import { PREVIEW_LENGTH } from "../tree/contract.ts";
+import { messages } from "./messages.ts";
 
 /** A branch of a session, as a branch row's command target and the sheet's locator name it. */
 export type BranchRef = { readonly session: string; readonly conversation: number };
@@ -54,6 +55,7 @@ export function BranchSheet({
 	onSave: (label: string | null) => void;
 	onClose: () => void;
 }) {
+	const { t } = useMessages(messages);
 	const shown = label ?? title;
 	const [draft, setDraft] = useState(shown);
 	// The field is what the sheet is for: focused, its text selected, so typing replaces it.
@@ -70,7 +72,7 @@ export function BranchSheet({
 		onClose();
 	};
 	return (
-		<Sheet title="Branch name" onClose={onClose}>
+		<Sheet title={t("branch_title")} onClose={onClose}>
 			<form
 				className="stack"
 				onSubmit={(event) => {
@@ -79,7 +81,7 @@ export function BranchSheet({
 				}}
 			>
 				<label className="field">
-					<span className="label">Label in the sidebar and /tree</span>
+					<span className="label">{t("branch_label")}</span>
 					<input
 						ref={field}
 						className="input"
@@ -88,16 +90,14 @@ export function BranchSheet({
 						onChange={(event) => setDraft(event.target.value)}
 					/>
 				</label>
-				{resettable && (
-					<p className="muted small">The first branch shows the session title until it gets a label of its own.</p>
-				)}
+				{resettable && <p className="muted small">{t("branch_hint")}</p>}
 				<div className="inline-form">
 					<button type="submit" className="button" disabled={unchanged || (!next && !resettable)}>
-						Save
+						{t("save")}
 					</button>
 					{resettable && label !== null && (
 						<button type="button" className="text-action" onClick={() => save(null)}>
-							Use the session title
+							{t("use_session_title")}
 						</button>
 					)}
 				</div>

@@ -1,7 +1,7 @@
 // Views (web): the workbench in place of the bare chat, the built-in view kinds, the top bar's controls, the composer's
 // chip, the view tools' activities, the note on messages that carried view context, and the views' commands of the
 // command menu (commands.tsx).
-import { contribute, defineFacet, serveKeyed } from "@p2/app/v1";
+import { contribute, defineFacet, serveKeyed, Translations } from "@p2/app/v1";
 import { CommandPages, Commands, Slots, ToolActivities } from "@p2/app/v1/web";
 import { TranscriptEntries } from "../chat/contract.ts";
 import { VIEW_ACTIVITIES } from "./activity.tsx";
@@ -10,6 +10,7 @@ import { VIEW_INPUT } from "./contract.ts";
 import { type ViewsPage, ViewsPages } from "./contract.web.ts";
 import { frameHandles, noteSelection, ViewKinds } from "./kinds.ts";
 import { annotateMode } from "./layout-store.ts";
+import { messages } from "./messages.ts";
 import { ChangesPane, MarkdownPane } from "./panes.tsx";
 import { ContextChip, openView, ViewActions } from "./sheet.tsx";
 import "./views.css";
@@ -33,6 +34,7 @@ export default defineFacet((host) => {
 	serveKeyed(host, ViewKinds);
 	serveKeyed(host, ViewsPages);
 	contribute(host, "p2.web-views", (self) => {
+		self.contribute(Translations, messages.translations);
 		self.contribute(ViewsPages, { views: VIEWS_PAGE });
 		self.contribute(Slots, { workbench: Workbench, "view-actions": ViewActions, "composer:views": ContextChip });
 		self.contribute(ViewKinds, { markdown: { Pane: MarkdownPane }, changes: { Pane: ChangesPane } });

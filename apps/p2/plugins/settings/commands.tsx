@@ -11,13 +11,16 @@ import {
 	type SettingsSectionChoice,
 	useCommandMatches,
 	useCommandMenu,
+	useMessages,
 	useOwner,
 	useSettingsSections,
 } from "@p2/app/v1/web";
 import { type ComponentType, useMemo } from "react";
+import { messages } from "./messages.ts";
 import { OWN_SECTIONS } from "./sections.ts";
 
-/** The commands, by id. */
+/** The commands, by id. Title and group are registered at load time (the menu reads them as static fields); the
+ *  section labels resolve in the page's language in `useEntries`. */
 export const SETTINGS_COMMANDS: Readonly<Record<string, Command>> = {
 	"settings.open": {
 		title: "Open settings…",
@@ -30,7 +33,7 @@ export const SETTINGS_COMMANDS: Readonly<Record<string, Command>> = {
 	},
 };
 
-/** The pages, by name. */
+/** The pages, by name. Label and placeholder are read at registration time as static fields. */
 export const SETTINGS_PAGES: Readonly<Record<string, CommandPage>> = {
 	settings: { label: "Settings", placeholder: "Search settings…", Body: SettingsPage },
 };
@@ -49,10 +52,11 @@ type Entry = {
 
 /** The window's sections in its list's order: its own, then the plugins'. */
 function useEntries(): readonly Entry[] {
+	const { t } = useMessages(messages);
 	const sections = useSettingsSections();
 	return useMemo(
 		() => [
-			...OWN_SECTIONS.map(({ id, label }) => ({ key: `own:${id}`, label, section: { locator: id } })),
+			...OWN_SECTIONS.map(({ id, label }) => ({ key: `own:${id}`, label: t(label), section: { locator: id } })),
 			...sections.map(([name, { label, title, Shown }]) => ({
 				key: name,
 				label,
@@ -61,7 +65,7 @@ function useEntries(): readonly Entry[] {
 				Shown,
 			})),
 		],
-		[sections],
+		[sections, t],
 	);
 }
 
@@ -69,9 +73,10 @@ const entryText = (entry: Entry): string => (entry.title ? `${entry.label} ${ent
 
 /** Every section, the window's order kept while the query is empty. */
 function SettingsPage() {
+	const { t } = useMessages(messages);
 	const matches = useCommandMatches(useEntries(), entryText);
 	return (
-		<CommandMenu.Group heading="Settings">
+		<CommandMenu.Group heading={t("settings_group")}>
 			{matches.map((entry) => (
 				<SectionRow key={entry.key} entry={entry} />
 			))}

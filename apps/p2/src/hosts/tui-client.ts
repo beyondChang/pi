@@ -86,6 +86,8 @@ export async function startTuiClient(options: {
 	onFailure?: (message: string) => void;
 	/** The server stopped admitting these credentials while running (section 4.1 revocation); the client closes. */
 	onAccessEnded?: () => void;
+	/** The visitor's languages, most preferred first, until they choose one: the system's locale by default. */
+	locales?: readonly string[];
 }): Promise<TuiClient> {
 	requireTuiNode();
 	const transport = options.transport ?? cookieTransport(options.url, options.credentials ?? {});
@@ -400,6 +402,7 @@ export async function startTuiClient(options: {
 					// The visitor's mouse policy decides whether pi-tui captures the mouse (wheel, app-owned selection).
 					mouse: (options.mouse ?? "off") !== "off",
 					...(options.role ? { role: options.role } : {}),
+					...(options.locales ? { locales: options.locales } : {}),
 				},
 				onFailure: (message) => {
 					if (sandbox === candidate) fail(message);

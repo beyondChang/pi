@@ -16,12 +16,14 @@ import {
 	type ThemePreference,
 	useCommandMatches,
 	useCommandMenu,
+	useMessages,
 	useRoute,
 	useSidebarCollapsed,
 	useSidebarDocked,
 	useThemePreference,
 } from "@p2/app/v1/web";
 import type { ReactNode } from "react";
+import { messages } from "./messages.ts";
 
 /** The commands, by id. */
 export const SHELL_COMMANDS: Readonly<Record<string, Command>> = {
@@ -94,19 +96,24 @@ function SidePanelOpen({ children }: { children: ReactNode }) {
 
 /** The theme switch's choices, in its cycle's order. */
 const THEMES: readonly ThemePreference[] = ["system", "light", "dark"];
-const themeText = (theme: ThemePreference): string => THEME_CHOICES[theme].label;
+const themeKey: Record<ThemePreference, "theme_system" | "theme_light" | "theme_dark"> = {
+	system: "theme_system",
+	light: "theme_light",
+	dark: "theme_dark",
+};
 
 /** System, Light and Dark, this browser's choice checked; picking one applies it at once, as the theme switch does. */
 function ThemePage() {
+	const { t } = useMessages(messages);
 	const { close } = useCommandMenu();
 	const current = useThemePreference();
-	const matches = useCommandMatches(THEMES, themeText);
+	const matches = useCommandMatches(THEMES, (theme) => themeKey[theme]);
 	return (
-		<CommandMenu.Group heading="Theme">
+		<CommandMenu.Group heading={t("theme_group")}>
 			{matches.map((theme) => (
 				<CommandMenu.Row
 					key={theme}
-					title={THEME_CHOICES[theme].label}
+					title={t(themeKey[theme])}
 					icon={THEME_CHOICES[theme].icon}
 					checked={theme === current}
 					onSelect={async () => {

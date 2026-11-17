@@ -9,6 +9,7 @@ import {
 	PlusIcon,
 	Sheet,
 	SlotList,
+	useMessages,
 	useNavigation,
 	useObject,
 	useOptimisticCall,
@@ -16,6 +17,7 @@ import {
 } from "@p2/app/v1/web";
 import { type KeyboardEvent, useEffect, useRef, useState } from "react";
 import { type EnvSummary, Envs, type EnvTest, type EnvUser, type SandboxStatus } from "./contract.ts";
+import { messages } from "./messages.ts";
 import { SecretsSection } from "./SecretsSection.tsx";
 import {
 	DEFAULT_DISK_GB,
@@ -177,12 +179,14 @@ function TestResult({
 	onAccept: (lines: string[]) => void;
 	onForget: () => void;
 }) {
+	const { t } = useMessages(messages);
 	if (test.ok)
 		return (
 			<>
 				<div className="notice env-test">
 					<p>
-						<strong>Connected</strong> · {test.platform} {test.arch} · pi-env {test.version} · {test.latencyMs} ms
+						<strong>{t("connected")}</strong> · {test.platform} {test.arch} · pi-env {test.version} ·{" "}
+						{test.latencyMs} ms
 					</p>
 					<p className="muted small mono">{test.home}</p>
 					<p className="muted small">
@@ -198,9 +202,9 @@ function TestResult({
 					<div className="notice env-test">
 						<p>
 							{test.sandboxes.runtime === "none" ? (
-								<strong>Sandboxes: not available</strong>
+								<strong>{t("sandboxes_unavailable")}</strong>
 							) : (
-								<strong>Sandboxes: ready</strong>
+								<strong>{t("sandboxes_ready")}</strong>
 							)}
 						</p>
 						{test.sandboxes.detail && <p className="muted small">{test.sandboxes.detail}</p>}
@@ -230,7 +234,7 @@ function TestResult({
 							disabled={busy}
 							onClick={() => onAccept(test.hostKey?.lines ?? [])}
 						>
-							Trust this key
+							{t("trust_key")}
 						</button>
 					)}
 				</>
@@ -242,7 +246,7 @@ function TestResult({
 						someone intercepts the connection. Forget the old key only if you know why it changed.
 					</p>
 					<button type="button" className="text-action danger" disabled={busy} onClick={onForget}>
-						Forget old key
+						{t("forget_old_key")}
 					</button>
 				</>
 			)}
@@ -259,6 +263,7 @@ function KeySection({
 	name: string;
 	onKey: (identityFile: string) => void;
 }) {
+	const { t } = useMessages(messages);
 	const [publicKey, setPublicKey] = useState<string>();
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<string>();
@@ -296,7 +301,7 @@ function KeySection({
 	};
 	return (
 		<div className="stack env-key">
-			<span className="label">SSH key</span>
+			<span className="label">{t("ssh_key")}</span>
 			{publicKey ? (
 				<>
 					<p className="muted small">
@@ -310,7 +315,7 @@ function KeySection({
 						value={publicKey}
 						onFocus={(event) => event.target.select()}
 					/>
-					<CopyButton text={publicKey} label="Copy public key" />
+					<CopyButton text={publicKey} label={t("copy_public_key")} />
 				</>
 			) : (
 				<p className="muted small">
@@ -326,11 +331,11 @@ function KeySection({
 						disabled={busy || !valid}
 						onClick={() => void run(() => service.generateKey({ name }, BACKGROUND_CONTEXT))}
 					>
-						Generate key
+						{t("generate_key")}
 					</button>
 				)}
 				<label className="button">
-					Upload private key
+					{t("upload_private_key")}
 					<input
 						type="file"
 						hidden
@@ -347,10 +352,8 @@ function KeySection({
 					/>
 				</label>
 			</div>
-			{!valid && <p className="muted small">Enter the environment's name first; the key is stored under it.</p>}
-			<p className="muted small">
-				Uploads pass through your tunnel or relay. Use a trusted transport for private keys.
-			</p>
+			{!valid && <p className="muted small">{t("key_name_first")}</p>}
+			<p className="muted small">{t("key_transport")}</p>
 			{error && (
 				<p className="notice error" role="alert">
 					{error}
@@ -371,9 +374,10 @@ function NameField({
 	placeholder: string;
 	onChange: (value: string) => void;
 }) {
+	const { t } = useMessages(messages);
 	return (
 		<label className="field">
-			<span className="label">Name</span>
+			<span className="label">{t("name")}</span>
 			<input
 				className="input mono"
 				value={value}
@@ -395,11 +399,12 @@ function SshFields({
 	existing: boolean;
 	update: (patch: Partial<SshDraft>) => void;
 }) {
+	const { t } = useMessages(messages);
 	return (
 		<>
 			{!existing && <NameField value={draft.name} placeholder="gpu" onChange={(name) => update({ name })} />}
 			<label className="field">
-				<span className="label">Host (name or ~/.ssh/config alias)</span>
+				<span className="label">{t("host_label")}</span>
 				<input
 					className="input mono"
 					value={draft.host}
@@ -411,7 +416,7 @@ function SshFields({
 			</label>
 			<div className="env-row">
 				<label className="field">
-					<span className="label">User</span>
+					<span className="label">{t("user_label")}</span>
 					<input
 						className="input mono"
 						value={draft.user}
@@ -420,7 +425,7 @@ function SshFields({
 					/>
 				</label>
 				<label className="field env-port">
-					<span className="label">Port</span>
+					<span className="label">{t("port_label")}</span>
 					<input
 						className="input mono"
 						value={draft.port}
@@ -431,7 +436,7 @@ function SshFields({
 				</label>
 			</div>
 			<label className="field">
-				<span className="label">Identity file</span>
+				<span className="label">{t("identity_file")}</span>
 				<input
 					className="input mono"
 					value={draft.identityFile}
@@ -441,7 +446,7 @@ function SshFields({
 				/>
 			</label>
 			<label className="field">
-				<span className="label">Shell for commands (default: bash, else sh)</span>
+				<span className="label">{t("shell_label")}</span>
 				<input
 					className="input mono"
 					value={draft.shellPath}
@@ -455,10 +460,10 @@ function SshFields({
 					checked={draft.loginShell}
 					onChange={(event) => update({ loginShell: event.target.checked })}
 				/>
-				Start through the login shell (loads ~/.profile, e.g. Homebrew's PATH on macOS)
+				{t("login_shell")}
 			</label>
 			<label className="field">
-				<span className="label">Environment variables (KEY=value per line)</span>
+				<span className="label">{t("env_vars_label")}</span>
 				<textarea
 					className="input mono"
 					rows={2}
@@ -481,6 +486,7 @@ function FoldersField({
 	mounts: SandboxMount[];
 	onChange: (mounts: SandboxMount[]) => void;
 }) {
+	const { t } = useMessages(messages);
 	const [adding, setAdding] = useState<{ host: string; guest: string; readonly: boolean }>();
 	const ready = adding !== undefined && adding.host.trim() !== "" && adding.guest.trim() !== "";
 	const add = () => {
@@ -499,8 +505,8 @@ function FoldersField({
 	};
 	return (
 		<div className="stack sandbox-folders">
-			<span className="label">Folders from {host || "the host"}</span>
-			{!mounts.length && !adding && <p className="muted small">None: the VM sees only its own files.</p>}
+			<span className="label">{t("folders_title", host)}</span>
+			{!mounts.length && !adding && <p className="muted small">{t("no_folders")}</p>}
 			{mounts.map((mount, index) => (
 				<div className="sandbox-folder" key={mount.guest}>
 					<span className="mono small">
@@ -509,7 +515,7 @@ function FoldersField({
 					<button
 						type="button"
 						className="text-action"
-						title={mount.readonly ? "Read-only; tap to allow writes" : "Writable; tap to make read-only"}
+						title={mount.readonly ? t("readonly") : t("writable")}
 						onClick={() =>
 							onChange(
 								mounts.map((each, at) =>
@@ -525,7 +531,7 @@ function FoldersField({
 					<button
 						type="button"
 						className="text-action"
-						aria-label={`Remove ${mount.guest}`}
+						aria-label={t("remove_folder", mount.guest)}
 						onClick={() => onChange(mounts.filter((_, at) => at !== index))}
 					>
 						✕
@@ -536,7 +542,7 @@ function FoldersField({
 				<div className="stack">
 					<div className="env-row">
 						<label className="field">
-							<span className="label">Folder on {host || "the host"}</span>
+							<span className="label">{t("folder_on_host", host)}</span>
 							<input
 								className="input mono"
 								value={adding.host}
@@ -547,7 +553,7 @@ function FoldersField({
 							/>
 						</label>
 						<label className="field">
-							<span className="label">Path in the sandbox</span>
+							<span className="label">{t("sandbox_path")}</span>
 							<input
 								className="input mono"
 								value={adding.guest}
@@ -564,14 +570,14 @@ function FoldersField({
 							checked={adding.readonly}
 							onChange={(event) => setAdding({ ...adding, readonly: event.target.checked })}
 						/>
-						Read-only
+						{t("readonly")}
 					</label>
 					<div className="inline-form">
 						<button type="button" className="button" disabled={!ready} onClick={add}>
-							Add folder
+							{t("add_folder")}
 						</button>
 						<button type="button" className="text-action" onClick={() => setAdding(undefined)}>
-							Cancel
+							{t("cancel")}
 						</button>
 					</div>
 				</div>
@@ -599,18 +605,19 @@ function SandboxFields({
 	hosts: string[];
 	update: (patch: Partial<SandboxDraft>) => void;
 }) {
+	const { t } = useMessages(messages);
 	return (
 		<>
 			{!existing && <NameField value={draft.name} placeholder="box1" onChange={(name) => update({ name })} />}
 			<label className="field">
-				<span className="label">Runs on</span>
+				<span className="label">{t("runs_on")}</span>
 				<select
 					className="input"
 					value={draft.host}
 					onChange={(event) => update({ host: event.target.value })}
 					required
 				>
-					{!hosts.includes(draft.host) && <option value="">Choose an SSH environment</option>}
+					{!hosts.includes(draft.host) && <option value="">{t("choose_ssh")}</option>}
 					{hosts.map((host) => (
 						<option key={host} value={host}>
 							{host}
@@ -619,7 +626,7 @@ function SandboxFields({
 				</select>
 			</label>
 			<label className="field">
-				<span className="label">Image (optional)</span>
+				<span className="label">{t("image_label")}</span>
 				<input
 					className="input mono"
 					value={draft.image}
@@ -630,7 +637,7 @@ function SandboxFields({
 			</label>
 			<FoldersField host={draft.host} mounts={draft.mounts} onChange={(mounts) => update({ mounts })} />
 			<label className="field">
-				<span className="label">Allowed hosts (one per line)</span>
+				<span className="label">{t("allowed_hosts")}</span>
 				<textarea
 					className="input mono"
 					rows={3}
@@ -639,11 +646,11 @@ function SandboxFields({
 					placeholder={"github.com\n*.npmjs.org"}
 					{...NO_AUTOCORRECT}
 				/>
-				<span className="muted small">All other HTTP(S) is refused with 403. No other protocols.</span>
+				<span className="muted small">{t("allowed_hosts_note")}</span>
 			</label>
 			<div className="env-row">
 				<label className="field">
-					<span className="label">CPUs</span>
+					<span className="label">{t("cpus")}</span>
 					<input
 						className="input mono"
 						value={draft.cpus}
@@ -653,7 +660,7 @@ function SandboxFields({
 					/>
 				</label>
 				<label className="field">
-					<span className="label">Memory (MB)</span>
+					<span className="label">{t("memory")}</span>
 					<input
 						className="input mono"
 						value={draft.memoryMb}
@@ -663,7 +670,7 @@ function SandboxFields({
 					/>
 				</label>
 				<label className="field">
-					<span className="label">Disk (GB)</span>
+					<span className="label">{t("disk")}</span>
 					<input
 						className="input mono"
 						value={draft.diskGb}
@@ -673,17 +680,22 @@ function SandboxFields({
 					/>
 				</label>
 			</div>
-			<span className="muted small">
-				The VM's own disk keeps what is installed in it across restarts. It can only grow; Reset disk starts over.
-			</span>
+			<span className="muted small">{t("disk_note")}</span>
 		</>
 	);
 }
 
 /** A VM state dot and word, for list rows. */
 function VmLabel({ vm, tested }: { vm: VmState | undefined; tested: boolean }) {
+	const { t } = useMessages(messages);
 	const text =
-		vm === undefined ? (tested ? "…" : "not tested") : vm.state === "stopped" && !tested ? "not tested" : vm.state;
+		vm === undefined
+			? tested
+				? "…"
+				: t("not_tested")
+			: vm.state === "stopped" && !tested
+				? t("not_tested")
+				: vm.state;
 	return (
 		<>
 			<span className={`vm-dot ${vm?.state ?? ""}`} />
@@ -694,38 +706,40 @@ function VmLabel({ vm, tested }: { vm: VmState | undefined; tested: boolean }) {
 
 /** A sandbox's VM on its detail screen. */
 function VmStatus({ vm, host }: { vm: VmState | undefined; host: string }) {
-	if (!vm) return <p className="notice">Reading the VM's state on {host}…</p>;
-	if (vm.state === "unknown") return <p className="notice error">VM state unknown: {vm.error}</p>;
+	const { t } = useMessages(messages);
+	if (!vm) return <p className="notice">{t("vm_reading", host)}</p>;
+	if (vm.state === "unknown") return <p className="notice error">{t("vm_unknown", vm.error)}</p>;
 	if (vm.state === "stopped")
 		return (
 			<div className="notice env-test">
 				<p>
-					<strong>Stopped</strong> · on {host}
+					<strong>{t("stopped")}</strong> · on {host}
 				</p>
 			</div>
 		);
 	return (
 		<div className="notice env-test">
 			<p>
-				<strong>Running</strong> · up {uptime(vm.startedAt)} · on {host}
+				<strong>{t("running")}</strong> · up {uptime(vm.startedAt)} · on {host}
 			</p>
 			<p className="muted small">
 				{plural(vm.cpus, "CPU")} · {vm.memoryMb} MB
 			</p>
-			{!vm.current && <p className="small">⚠ Changes apply when the VM next starts.</p>}
+			{!vm.current && <p className="small">{t("changes_next_start")}</p>}
 		</div>
 	);
 }
 
 /** The sessions using an environment (archived ones too), each opening its session. */
 function UsersList({ users, onOpen }: { users: readonly EnvUser[]; onOpen: (user: EnvUser) => void }) {
+	const { t } = useMessages(messages);
 	return (
 		<div className="list env-users">
-			<span className="label">Used by {plural(users.length, "session")}</span>
+			<span className="label">{t("used_by", users.length)}</span>
 			{users.map((user) => (
 				<button type="button" key={user.id} className="row-button" onClick={() => onOpen(user)}>
-					<span>{user.title || "Untitled"}</span>
-					{user.archived && <small className="row-value">archived</small>}
+					<span>{user.title || t("untitled")}</span>
+					{user.archived && <small className="row-value">{t("archived")}</small>}
 					<ChevronIcon />
 				</button>
 			))}
@@ -759,6 +773,7 @@ function SandboxRow({
 
 /** The route's locator is the edited environment; an empty locator creates one. Form edits are not steps. */
 export function EnvsPanel({ env: screen, onClose }: { env?: string; onClose: () => void }) {
+	const { t } = useMessages(messages);
 	const service = useObject(Envs, {});
 	const loadError = useReadable(service?.failure);
 	const nav = useNavigation();
@@ -905,7 +920,7 @@ export function EnvsPanel({ env: screen, onClose }: { env?: string; onClose: () 
 		const vm = vms[name];
 		const ready = Boolean(name && editing.draft.host.trim());
 		return (
-			<Sheet title={existing ? name : sandbox ? "New sandbox" : "New environment"} onClose={onClose}>
+			<Sheet title={existing ? name : sandbox ? t("new_sandbox") : t("new_environment")} onClose={onClose}>
 				{editing.kind === "gondolin" && (
 					<>
 						{existing && saved?.config.type === "gondolin" && service && (
@@ -924,7 +939,7 @@ export function EnvsPanel({ env: screen, onClose }: { env?: string; onClose: () 
 													)
 												}
 											>
-												Stop
+												{t("stop")}
 											</button>
 											<button
 												type="button"
@@ -937,7 +952,7 @@ export function EnvsPanel({ env: screen, onClose }: { env?: string; onClose: () 
 													})
 												}
 											>
-												Restart
+												{t("restart")}
 											</button>
 										</>
 									) : (
@@ -951,11 +966,11 @@ export function EnvsPanel({ env: screen, onClose }: { env?: string; onClose: () 
 												)
 											}
 										>
-											Start
+											{t("start")}
 										</button>
 									)}
 									<button type="button" className="button" disabled={busy} onClick={() => void run(testNow)}>
-										{busy ? "Working…" : "Test"}
+										{busy ? t("working") : t("test")}
 									</button>
 								</div>
 								{confirmReset ? (
@@ -976,10 +991,10 @@ export function EnvsPanel({ env: screen, onClose }: { env?: string; onClose: () 
 													})
 												}
 											>
-												Reset disk
+												{t("reset_disk")}
 											</button>
 											<button type="button" className="text-action" onClick={() => setConfirmReset(false)}>
-												Cancel
+												{t("cancel")}
 											</button>
 										</div>
 									</div>
@@ -990,7 +1005,7 @@ export function EnvsPanel({ env: screen, onClose }: { env?: string; onClose: () 
 										disabled={busy}
 										onClick={() => setConfirmReset(true)}
 									>
-										Reset disk
+										{t("reset_disk")}
 									</button>
 								)}
 							</div>
@@ -1021,7 +1036,7 @@ export function EnvsPanel({ env: screen, onClose }: { env?: string; onClose: () 
 					)}
 					<div className="inline-form">
 						<button type="submit" className="button" disabled={busy || !ready}>
-							Save
+							{t("save")}
 						</button>
 						<button
 							type="button"
@@ -1030,12 +1045,12 @@ export function EnvsPanel({ env: screen, onClose }: { env?: string; onClose: () 
 							onClick={() => saveAnd(sandbox ? (vm?.state === "running" ? "restart" : "start") : "test")}
 						>
 							{busy
-								? "Working…"
+								? t("working")
 								: sandbox
 									? vm?.state === "running"
-										? "Save and restart"
-										: "Save and start"
-									: "Save and test"}
+										? t("save_and_restart")
+										: t("save_and_start")
+									: t("save_and_test")}
 						</button>
 					</div>
 				</form>
@@ -1070,7 +1085,7 @@ export function EnvsPanel({ env: screen, onClose }: { env?: string; onClose: () 
 				)}
 				{editing.kind === "ssh" && existing && (
 					<div className="list">
-						<span className="label">Sandboxes on {name}</span>
+						<span className="label">{t("sandboxes_on", name)}</span>
 						{hostedSandboxes.map((entry) => (
 							<SandboxRow
 								key={entry.name}
@@ -1082,7 +1097,7 @@ export function EnvsPanel({ env: screen, onClose }: { env?: string; onClose: () 
 						))}
 						<button type="button" className="row-button" onClick={() => toScreen(`${NEW_SANDBOX}${name}`)}>
 							<span>
-								<PlusIcon size={14} /> Add sandbox
+								<PlusIcon size={14} /> {t("add_sandbox")}
 							</span>
 						</button>
 					</div>
@@ -1096,7 +1111,7 @@ export function EnvsPanel({ env: screen, onClose }: { env?: string; onClose: () 
 					)}
 					{existing &&
 						(hostedSandboxes.length > 0 ? (
-							<p className="muted small">Sandboxes run on it; delete them before the environment.</p>
+							<p className="muted small">{t("sandboxes_before_delete")}</p>
 						) : confirmDelete ? (
 							<div className="stack">
 								<span className="small">
@@ -1119,33 +1134,29 @@ export function EnvsPanel({ env: screen, onClose }: { env?: string; onClose: () 
 											toScreen(undefined, "close");
 										}}
 									>
-										Delete
+										{t("delete")}
 									</button>
 									<button type="button" className="text-action" onClick={() => setConfirmDelete(false)}>
-										Cancel
+										{t("cancel")}
 									</button>
 								</div>
 							</div>
 						) : (
 							<button type="button" className="text-action danger" onClick={() => setConfirmDelete(true)}>
-								{sandbox ? "Delete sandbox" : "Delete environment"}
-								{sessions > 0 ? " anyway" : ""}
+								{sandbox ? t("delete_sandbox") : t("delete_environment")}
+								{sessions > 0 ? t("delete_anyway") : ""}
 							</button>
 						))}
 					<button type="button" className="text-action" onClick={() => toScreen(undefined, "close")}>
-						← All environments
+						{t("all_environments")}
 					</button>
 				</div>
 			</Sheet>
 		);
 	}
 	return (
-		<Sheet title="Environments" onClose={onClose}>
-			<p className="muted small">
-				Sessions in a remote environment run their tools on that machine over SSH; the agent, its history and your
-				credentials stay here. Keys come from your SSH agent or identity file; passwords are not supported.
-				Sandboxes are VMs on a remote environment that sessions working in them cannot leave.
-			</p>
+		<Sheet title={t("sheet_title")} onClose={onClose}>
+			<p className="muted small">{t("intro")}</p>
 			{(error || loadError) && (
 				<p className="notice error" role="alert">
 					{error || loadError}
@@ -1161,10 +1172,10 @@ export function EnvsPanel({ env: screen, onClose }: { env?: string; onClose: () 
 							</span>
 							<small className="row-value">
 								{entry.test === undefined
-									? "Not tested"
+									? t("not_tested")
 									: entry.test.ok
 										? `${entry.test.platform} · ${entry.test.latencyMs} ms`
-										: "Failed"}
+										: t("failed")}
 							</small>
 							<ChevronIcon />
 						</button>
@@ -1184,21 +1195,21 @@ export function EnvsPanel({ env: screen, onClose }: { env?: string; onClose: () 
 								onClick={() => toScreen(`${NEW_SANDBOX}${entry.name}`)}
 							>
 								<span className="muted">
-									<PlusIcon size={14} /> Add sandbox on {entry.name}
+									<PlusIcon size={14} /> {t("add_sandbox_on", entry.name)}
 								</span>
 							</button>
 						)}
 					</div>
 				))}
-				{envs && !envs.length && <p className="empty-note">No environments yet.</p>}
+				{envs && !envs.length && <p className="empty-note">{t("no_environments")}</p>}
 				<button type="button" className="row-button" onClick={() => toScreen("")}>
 					<span>
-						<PlusIcon size={14} /> Add environment
+						<PlusIcon size={14} /> {t("add_environment")}
 					</span>
 				</button>
 			</div>
 			<div className="list">
-				<span className="label">This device</span>
+				<span className="label">{t("this_device")}</span>
 				<SlotList prefix="envs-actions" />
 			</div>
 		</Sheet>

@@ -19,6 +19,7 @@ import {
 	useCommandMenuRow,
 	useCommandTargetRow,
 	useLinkHref,
+	useMessages,
 	useRegistry,
 } from "@p2/app/v1/web";
 import {
@@ -34,6 +35,7 @@ import {
 } from "react";
 import { GlyphIcon } from "../../glyphs/GlyphIcon.tsx";
 import { branchSheetLayer, branchTarget } from "../BranchSheet.tsx";
+import { messages } from "../messages.ts";
 import {
 	type ArchivedItem,
 	type BranchItem,
@@ -91,13 +93,14 @@ export function HiddenAttention({ activity }: { activity: Activity }) {
  * ago it was last active.
  */
 function SubagentEnd({ state, tools, now }: { state: SubagentState; tools: Tools; now: number }) {
+	const { t } = useMessages(messages);
 	switch (state.kind) {
 		case "busy":
 			return <span className="subagent-step">{stepWords(state.work, tools)}</span>;
 		case "failed":
-			return <FailedMark label="Failed" title={state.detail ?? failureWords(state.reason)} />;
+			return <FailedMark label={t("failed")} title={state.detail ?? failureWords(state.reason)} />;
 		case "stopped":
-			return <span className="subagent-step">Stopped</span>;
+			return <span className="subagent-step">{t("stopped")}</span>;
 		case "idle":
 			return state.since === undefined ? null : <span className="session-time">{ago(state.since, now)}</span>;
 	}
@@ -443,6 +446,7 @@ function TreeGuides({ row }: { row: BranchItem }) {
  * while it has focus).
  */
 function BranchRow({ row }: { row: BranchItem }) {
+	const { t } = useMessages(messages);
 	const { state, actions, meta } = useConversationRows();
 	const linkHref = useLinkHref();
 	const { session } = state;
@@ -480,8 +484,8 @@ function BranchRow({ row }: { row: BranchItem }) {
 				<button
 					type="button"
 					className="nav-control branch-rename"
-					aria-label={`Rename branch ${label}`}
-					title="Rename branch"
+					aria-label={t("rename_branch_aria", label)}
+					title={t("rename_branch")}
 					onClick={() => openLayer(branchSheetLayer(branch.id))}
 				>
 					<NavEditIcon size={16} />

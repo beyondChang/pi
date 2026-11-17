@@ -14,10 +14,12 @@ import {
 	Slot,
 	SlotList,
 	useLinkHref,
+	useMessages,
 	useScrollMemory,
 } from "@p2/app/v1/web";
 import { useEffect, useRef, useState } from "react";
 import type { SearchResults } from "../../search/contract.ts";
+import { messages as sessionMessages } from "../messages.ts";
 import { type ListEntry, type ListPageData, type NewTarget, WINDOWS } from "./model.ts";
 import { pageRoute, type RowActions, SessionItem } from "./Row.tsx";
 
@@ -122,6 +124,7 @@ export function ListPage({
 	/** Starts a new session in a group (the owner's). */
 	onNewIn?: (target: NewTarget) => void;
 }) {
+	const { t } = useMessages(sessionMessages);
 	const linkHref = useLinkHref();
 	const archived = data?.archived ?? false;
 	const [query, setQuery] = useState(() => storedQuery(page));
@@ -156,7 +159,12 @@ export function ListPage({
 	return (
 		<div className="list-page">
 			<header className="topbar">
-				<button type="button" className="icon-button menu sidebar-open" onClick={openSidebar} aria-label="Sessions">
+				<button
+					type="button"
+					className="icon-button menu sidebar-open"
+					onClick={openSidebar}
+					aria-label={t("sessions")}
+				>
 					<MenuIcon />
 					<Slot name="menu-badge" />
 				</button>
@@ -181,8 +189,8 @@ export function ListPage({
 									setQuery(event.target.value);
 									storeQuery(page, event.target.value);
 								}}
-								placeholder={archived ? "Search the archive" : `Search ${data.name}`}
-								aria-label="Search sessions and messages"
+								placeholder={archived ? t("search_archive") : t("search_named", data.name)}
+								aria-label={t("search_sessions")}
 							/>
 						</label>
 					)}
@@ -208,7 +216,7 @@ export function ListPage({
 						)}
 					{messages.length > 0 && (
 						<section className="list-group">
-							<h2 className="list-group-label">Messages</h2>
+							<h2 className="list-group-label">{t("hit_messages")}</h2>
 							{messages.slice(0, 40).map((hit) => (
 								<button
 									type="button"
@@ -228,10 +236,10 @@ export function ListPage({
 						</section>
 					)}
 					{data && listed.length === 0 && content?.layout === "sessions" && (
-						<p className="empty-note">No sessions</p>
+						<p className="empty-note">{t("no_sessions")}</p>
 					)}
-					{results && !found && messages.length === 0 && <p className="empty-note">Nothing found</p>}
-					{!data && <p className="empty-note">This list no longer exists</p>}
+					{results && !found && messages.length === 0 && <p className="empty-note">{t("nothing_found")}</p>}
+					{!data && <p className="empty-note">{t("list_gone")}</p>}
 				</div>
 			</div>
 		</div>

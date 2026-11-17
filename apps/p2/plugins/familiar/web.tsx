@@ -1,6 +1,6 @@
 // The Familiar in the owner's page, named "Ask Pi": home (`/`) opens its session, as its row above the sidebar's "New
 // session" does; either makes it on first use. The sidebar lists its session there only, not in any rollup.
-import { BACKGROUND_CONTEXT, contribute, defineFacet, keptIn, liveIn } from "@p2/app/v1";
+import { BACKGROUND_CONTEXT, contribute, defineFacet, keptIn, liveIn, Translations } from "@p2/app/v1";
 import {
 	conversationRoute,
 	NEW_SESSION,
@@ -9,6 +9,7 @@ import {
 	SideNavigation,
 	Slots,
 	useComposerState,
+	useMessages,
 	useNavigation,
 	useObject,
 	useOwner,
@@ -19,6 +20,7 @@ import { useContext, useEffect, useRef, useState } from "react";
 import { Sessions } from "../sessions/contract.ts";
 import { DrawerRowsContext, IconMarker, NavRow, UnreadMark } from "../sessions/contract.web.tsx";
 import { FAMILIAR_TITLE, Familiar } from "./contract.ts";
+import { messages } from "./messages.ts";
 import "./style.css";
 
 /** The owner's row above "New session"; guests have none. */
@@ -31,6 +33,7 @@ function FamiliarRow() {
  * selected while its session shows. It opens the session, which the server makes or restores first when it has to.
  */
 function OwnerRow() {
+	const { t } = useMessages(messages);
 	const held = useObject(Familiar, {});
 	const familiar = liveIn(held, "owner");
 	// As the server last said: while the connection is down or coming back, its row stays out of the rollups, as the
@@ -67,7 +70,7 @@ function OwnerRow() {
 				selected={row !== undefined && route.session === row.id}
 				className="group-row"
 				linkClassName="familiar-entry"
-				title={opening ? "Opening…" : undefined}
+				title={opening ? t("opening") : undefined}
 				onActivate={open}
 				marker={
 					<IconMarker working={row !== undefined && row.worker.busy.length > 0}>
@@ -118,6 +121,7 @@ function OwnerHome() {
 
 export default defineFacet((host) => {
 	contribute(host, "p2.web-familiar", (self) => {
+		self.contribute(Translations, messages.translations);
 		self.contribute(Slots, { "sidebar-start:familiar": FamiliarRow, home: FamiliarHome });
 	});
 });

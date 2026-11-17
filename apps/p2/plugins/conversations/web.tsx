@@ -1,4 +1,4 @@
-import { BACKGROUND_CONTEXT, contribute, defineFacet, liveIn } from "@p2/app/v1";
+import { BACKGROUND_CONTEXT, contribute, defineFacet, liveIn, Translations } from "@p2/app/v1";
 import {
 	navigate,
 	OpenPeerConversation,
@@ -6,14 +6,17 @@ import {
 	ToolActivities,
 	useComposerState,
 	useConnected,
+	useMessages,
 	useObject,
 	useReadable,
 } from "@p2/app/v1/web";
 import type { ReactNode } from "react";
 import { Sessions } from "../sessions/contract.ts";
 import { conversationsActivity } from "./activity.tsx";
+import { messages } from "./messages.ts";
 
 function Attribution({ children }: { children?: ReactNode }) {
+	const { t } = useMessages(messages);
 	const sessions = useObject(Sessions, {});
 	const listed = useReadable(liveIn(sessions, "owner", "guest")?.sessions) ?? [];
 	const owner = liveIn(sessions, "owner");
@@ -23,7 +26,7 @@ function Attribution({ children }: { children?: ReactNode }) {
 	const open = (session: string): void => {
 		const current = listed.find((entry) => entry.id === session);
 		if (!current) {
-			setError("The source conversation is unavailable");
+			setError(t("source_unavailable"));
 			return;
 		}
 		if (current.archivedAt === null) navigate({ session });
@@ -43,6 +46,7 @@ function Attribution({ children }: { children?: ReactNode }) {
 
 export default defineFacet((host) => {
 	contribute(host, "p2.web-conversations", (self) => {
+		self.contribute(Translations, messages.translations);
 		self.contribute(Slots, { "chat-attribution": Attribution });
 		self.contribute(ToolActivities, { conversations: conversationsActivity });
 	});

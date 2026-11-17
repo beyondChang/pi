@@ -1,4 +1,4 @@
-import { BACKGROUND_CONTEXT, contribute, defineFacet, follow, liveIn } from "@p2/app/v1";
+import { BACKGROUND_CONTEXT, contribute, defineFacet, follow, liveIn, Translations } from "@p2/app/v1";
 import type { Navigation, WorkspaceRoute } from "@p2/app/v1/web";
 import {
 	Commands,
@@ -7,6 +7,7 @@ import {
 	Slots,
 	useCanWrite,
 	useComposerState,
+	useMessages,
 	useNavigation,
 	useObject,
 	useOwner,
@@ -20,10 +21,12 @@ import { Sessions } from "../sessions/contract.ts";
 import { conversationLocation, Subagents } from "../subagents/contract.ts";
 import { WORKSPACE_COMMANDS } from "./commands.tsx";
 import { Workspace } from "./contract.ts";
+import { messages } from "./messages.ts";
 import { withWorkspace } from "./tabs.ts";
 import { WorkspacePanel as MobileWorkspacePanel } from "./Workspace.tsx";
 
 function WorkspaceButton() {
+	const { t } = useMessages(messages);
 	const nav = useNavigation();
 	const route = useRoute();
 	const canWrite = useCanWrite(route.session);
@@ -32,7 +35,7 @@ function WorkspaceButton() {
 		<button
 			type="button"
 			className={`icon-button workspace-toggle ${route.workspace ? "on" : ""}`}
-			aria-label="Workspace files and changes"
+			aria-label={t("button_aria")}
 			aria-pressed={!!route.workspace}
 			onClick={() =>
 				route.workspace
@@ -133,6 +136,7 @@ function NativePanel({
 
 export default defineFacet((host) => {
 	contribute(host, "p2.web-workspace", (self) => {
+		self.contribute(Translations, messages.translations);
 		self.contribute(Slots, { "workspace-actions": WorkspaceButton, "workspace-panel": WorkspacePanel });
 		self.contribute(Commands, WORKSPACE_COMMANDS);
 	});

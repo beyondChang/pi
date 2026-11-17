@@ -1,4 +1,4 @@
-import type { Contract, Held, ParamsOf } from "@earendil-works/chord";
+import type { Contract, Held, Messages, ParamsOf, Translator } from "@earendil-works/chord";
 import { BACKGROUND_CONTEXT } from "@earendil-works/chord/context";
 import { TuiScope as ChordTuiScope, type OptimisticAdd } from "@earendil-works/chord/tui";
 import type { NativeWatchable, Watchable } from "@earendil-works/chord/watch";
@@ -121,6 +121,10 @@ export class TuiScope {
 	): readonly [read: () => T, add: OptimisticAdd<A>, pending: () => boolean];
 	optimistic<T, A>(read: () => T, reduce?: (current: T, action: A) => T) {
 		return reduce ? this.#optimistic.optimistic(read, reduce) : this.#optimistic.optimistic(read);
+	}
+	/** A plugin's messages bound to the host's language (redrawn on a locale or catalog change), Chord's scope. */
+	messages<N extends string, M>(messages: Messages<N, M>): Translator<N, M> {
+		return this.#optimistic.messages(messages);
 	}
 	dispose(): void {
 		for (const stop of this.stops.splice(0)) stop();

@@ -23,6 +23,19 @@ import { RADIUS_POLL_MS, type RadiusTransport, radiusClient, radiusServer, radiu
 import { requireTuiNode } from "./tui-sandbox.ts";
 import { cookieTransport } from "./tui-transport.ts";
 
+/**
+ * The system's languages: `LANGUAGE` (a colon list), then `LC_ALL`, `LC_MESSAGES`, `LANG` (`de_DE.UTF-8` is `de-DE`;
+ * `C` and `POSIX` name none), then the runtime's default locale.
+ */
+function systemLocales(): readonly string[] {
+	const { LANGUAGE, LC_ALL, LC_MESSAGES, LANG } = process.env;
+	const named = [...(LANGUAGE ?? "").split(":"), LC_ALL, LC_MESSAGES, LANG].flatMap((value) => {
+		const tag = value?.replace(/[.@].*$/, "").replace(/_/g, "-");
+		return tag === undefined || tag === "" || tag === "C" || tag === "POSIX" ? [] : [tag];
+	});
+	return [...new Set([...named, Intl.DateTimeFormat().resolvedOptions().locale])];
+}
+
 const ask = async (question: string): Promise<string> => {
 	const input = createInterface({ input: stdin, output: stdout });
 	try {
@@ -95,6 +108,7 @@ try {
 				...(radius ? { pollMs: RADIUS_POLL_MS } : {}),
 				mouse: local.mouse,
 				role: admission.role,
+				locales: systemLocales(),
 				actions: launcherActions({
 					url,
 					credentials,

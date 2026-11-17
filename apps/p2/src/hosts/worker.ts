@@ -6,7 +6,7 @@
 // sends it to the server's store every second, as Chord's kit worker does; off, its host uses Chord's NOOP adapter.
 
 import { setTimeout as sleep } from "node:timers/promises";
-import { isChordError } from "@earendil-works/chord";
+import { isChordError, translationsFacet } from "@earendil-works/chord";
 import { filesFacet } from "@earendil-works/chord/app/files";
 import { nodeCompression } from "@earendil-works/chord/compression";
 import { BACKGROUND_CONTEXT } from "@earendil-works/chord/context";
@@ -20,7 +20,7 @@ import { createHost, hostErrorText } from "../runtime/chord.ts";
 import { configureFetch } from "../runtime/fetch.ts";
 import { hostFiles, openHostStore, sessionDirectory } from "../runtime/host-dirs.ts";
 import { captureProcessLogs, processLogs } from "../runtime/logs.ts";
-import { HOST, principalAttributes, SERVER } from "../runtime/principals.ts";
+import { HOST, type P2Principal, principalAttributes, SERVER } from "../runtime/principals.ts";
 import { follow } from "../runtime/refs.ts";
 import {
 	HarnessHost,
@@ -103,6 +103,8 @@ workerMain(
 					},
 					// The session's files (the kit's `Files`): `<data>/sessions/<id>/files/`.
 					{ name: "chord.app.files", facet: filesFacet(hostFiles(dir)) },
+					// The composed message catalogs a worker's facets contribute.
+					{ name: "chord.translations", facet: translationsFacet<P2Principal>() },
 				],
 			},
 			context,

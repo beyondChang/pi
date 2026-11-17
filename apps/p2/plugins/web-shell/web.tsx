@@ -1,7 +1,7 @@
 // App layout: the sidebar and main slots, the drawer on phones, Back/Forward navigation; the layout's and the theme's
 // commands of the command menu (commands.tsx).
 
-import { contribute, defineFacet } from "@p2/app/v1";
+import { contribute, defineFacet, Translations } from "@p2/app/v1";
 import {
 	AppLayout,
 	CommandPages,
@@ -16,6 +16,7 @@ import {
 } from "@p2/app/v1/web";
 import { useEffect } from "react";
 import { SHELL_COMMANDS, SHELL_PAGES } from "./commands.tsx";
+import { messages } from "./messages.ts";
 
 function App() {
 	const nav = getNavigation();
@@ -50,6 +51,7 @@ function App() {
 
 export default defineFacet((host) => {
 	contribute(host, "p2.web-shell", (self) => {
+		self.contribute(Translations, messages.translations);
 		self.contribute(Slots, { app: App });
 		self.contribute(Commands, SHELL_COMMANDS);
 		self.contribute(CommandPages, SHELL_PAGES);

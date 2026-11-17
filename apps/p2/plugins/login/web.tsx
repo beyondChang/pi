@@ -1,7 +1,7 @@
 // The Providers sheet (any owner): sign in to model providers, refresh their catalogs, sign out.
 
 import type { AuthEvent } from "@earendil-works/pi-ai";
-import { BACKGROUND_CONTEXT, contribute, defineFacet, type Held } from "@p2/app/v1";
+import { BACKGROUND_CONTEXT, contribute, defineFacet, type Held, Translations } from "@p2/app/v1";
 import {
 	CheckIcon,
 	ChevronIcon,
@@ -11,6 +11,7 @@ import {
 	Sheet,
 	useComposerState,
 	useHost,
+	useMessages,
 	useNavigation,
 	useObject,
 	useOptimisticCall,
@@ -21,6 +22,7 @@ import {
 } from "@p2/app/v1/web";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { type LoginState, ProviderLogin } from "./contract.ts";
+import { messages } from "./messages.ts";
 
 /** Links from providers open only over http(s). */
 function Link({ url, label }: { url: string; label: string }) {
@@ -39,24 +41,25 @@ function Link({ url, label }: { url: string; label: string }) {
 }
 
 function Notice({ event }: { event: AuthEvent }): ReactNode {
+	const { t } = useMessages(messages);
 	switch (event.type) {
 		case "auth_url":
 			return (
 				<div className="login-step">
-					<Link url={event.url} label="Continue in browser" />
+					<Link url={event.url} label={t("continue_browser")} />
 					{event.instructions && <p className="muted small">{event.instructions}</p>}
 				</div>
 			);
 		case "device_code":
 			return (
 				<div className="login-step">
-					<p className="muted small">Enter this code on the verification page</p>
+					<p className="muted small">{t("enter_code")}</p>
 					<div className="code-box">{event.userCode}</div>
 					{/* A provider may ask clients not to offer opening the page; its address is still needed. */}
 					{event.openBrowserOnConfirm === false ? (
 						<p className="muted small">{event.verificationUri}</p>
 					) : (
-						<Link url={event.verificationUri} label="Open verification page" />
+						<Link url={event.verificationUri} label={t("open_verification")} />
 					)}
 				</div>
 			);
@@ -67,7 +70,7 @@ function Notice({ event }: { event: AuthEvent }): ReactNode {
 				<div className="login-step">
 					<p>{event.message}</p>
 					{event.links?.map((link) => (
-						<Link key={link.url} url={link.url} label={link.label ?? "More information"} />
+						<Link key={link.url} url={link.url} label={link.label ?? t("more_info")} />
 					))}
 				</div>
 			);
@@ -76,6 +79,7 @@ function Notice({ event }: { event: AuthEvent }): ReactNode {
 
 /** The provider's question; answering it shows the flow working at once (the next prompt or progress follows). */
 function PromptForm({ state, onAnswer }: { state: LoginState; onAnswer: (promptId: string, value: string) => void }) {
+	const { t } = useMessages(messages);
 	const prompt = state.prompt;
 	const [value, setValue] = useState("");
 	if (!prompt) return null;
@@ -108,13 +112,7 @@ function PromptForm({ state, onAnswer }: { state: LoginState; onAnswer: (promptI
 			<label className="label" htmlFor="login-value">
 				{prompt.message}
 			</label>
-			{prompt.type === "manual_code" && (
-				<p className="muted small">
-					Complete sign-in in the provider tab, then paste the authorization code or final redirect URL below. If
-					you land on an unreachable localhost page, copy its full address from the address bar and paste it here;
-					that page does not need to load.
-				</p>
-			)}
+			{prompt.type === "manual_code" && <p className="muted small">{t("manual_code_hint")}</p>}
 			<input
 				id="login-value"
 				className="input"
@@ -125,7 +123,7 @@ function PromptForm({ state, onAnswer }: { state: LoginState; onAnswer: (promptI
 				onChange={(event) => setValue(event.target.value)}
 			/>
 			<button type="submit" className="login-continue">
-				<span>Continue</span>
+				<span>{t("continue")}</span>
 				<ChevronIcon />
 			</button>
 		</form>
@@ -134,6 +132,7 @@ function PromptForm({ state, onAnswer }: { state: LoginState; onAnswer: (promptI
 
 /** The provider list, one provider's actions, or the running login. Closing the sheet cancels an unfinished one. */
 function ProvidersSheet({ login, onClose }: { login: Held<typeof ProviderLogin> | undefined; onClose: () => void }) {
+	const { t } = useMessages(messages);
 	// Provider errors go to the app's toast, as in Pi Mobile.
 	const { fail } = useComposerState();
 	const known = useReadable(login?.providers);
@@ -211,7 +210,7 @@ function ProvidersSheet({ login, onClose }: { login: Held<typeof ProviderLogin> 
 						)}
 						{state.status === "success" && (
 							<p className="success">
-								<CheckIcon /> {state.message ?? "Signed in."}
+								<CheckIcon /> {state.message ?? t("signed_in")}
 							</p>
 						)}
 						{state.status !== "working" && state.status !== "success" && (
@@ -224,16 +223,16 @@ function ProvidersSheet({ login, onClose }: { login: Held<typeof ProviderLogin> 
 								// A start not answered yet has no attempt to cancel.
 								disabled={!state.attemptId}
 								onClick={() =>
-									guessLogin({ ...state, status: "cancelled", prompt: null, message: "Cancelled." }, () =>
+									guessLogin({ ...state, status: "cancelled", prompt: null, message: t("cancelled") }, () =>
 										login.cancel({ attemptId: state.attemptId }, BACKGROUND_CONTEXT),
 									)
 								}
 							>
-								Cancel
+								{t("cancel")}
 							</button>
 						) : (
 							<button type="button" className="text-action" onClick={back}>
-								Done
+								{t("done")}
 							</button>
 						)}
 					</div>
@@ -244,9 +243,9 @@ function ProvidersSheet({ login, onClose }: { login: Held<typeof ProviderLogin> 
 				<div className="provider-detail">
 					<p className="muted small">
 						{provider.signedIn
-							? `Signed in with ${provider.signedIn === "oauth" ? "a subscription" : "an API key"}.`
-							: "Not signed in. Environment keys may still apply."}{" "}
-						<span>Credentials are stored on the server.</span>
+							? t(provider.signedIn === "oauth" ? "signed_in_oauth" : "signed_in_key")
+							: t("not_signed_in")}{" "}
+						<span>{t("credentials_note")}</span>
 					</p>
 					<div className="login-actions">
 						{provider.loginMethods.map((method) => (
@@ -282,18 +281,12 @@ function ProvidersSheet({ login, onClose }: { login: Held<typeof ProviderLogin> 
 									setResult(undefined);
 									login
 										.refresh({ providerId: provider.id }, BACKGROUND_CONTEXT)
-										.then(({ models }) =>
-											setResult(
-												models
-													? `${models} model${models === 1 ? "" : "s"} available.`
-													: "Catalog updated; no models reported.",
-											),
-										)
+										.then(({ models }) => setResult(models ? t("models_available", models) : t("no_models")))
 										.catch(fail)
 										.finally(() => setBusy(false));
 								}}
 							>
-								<span>{busy ? "Updating model catalog…" : "Update model catalog"}</span>
+								<span>{busy ? t("updating_catalog") : t("update_catalog")}</span>
 								{!busy && <ChevronIcon />}
 							</button>
 						)}
@@ -305,7 +298,7 @@ function ProvidersSheet({ login, onClose }: { login: Held<typeof ProviderLogin> 
 									signOut(provider.id, () => login.logout({ providerId: provider.id }, BACKGROUND_CONTEXT))
 								}
 							>
-								<span>Sign out</span>
+								<span>{t("sign_out")}</span>
 							</button>
 						)}
 					</div>
@@ -319,15 +312,15 @@ function ProvidersSheet({ login, onClose }: { login: Held<typeof ProviderLogin> 
 		.filter((entry) => `${entry.name} ${entry.id}`.toLowerCase().includes(terms))
 		.sort((a, b) => Number(Boolean(b.signedIn)) - Number(Boolean(a.signedIn)) || a.name.localeCompare(b.name));
 	return (
-		<Sheet title="Providers" onClose={onClose} className="login-sheet">
+		<Sheet title={t("sheet_title")} onClose={onClose} className="login-sheet">
 			<div className="sheet-sticky">
 				<label className="search">
 					<SearchIcon />
 					<input
 						value={query}
 						onChange={(event) => setQuery(event.target.value)}
-						placeholder="Search providers"
-						aria-label="Search providers"
+						placeholder={t("search_placeholder")}
+						aria-label={t("search_aria")}
 					/>
 				</label>
 			</div>
@@ -350,13 +343,11 @@ function ProvidersSheet({ login, onClose }: { login: Held<typeof ProviderLogin> 
 						}}
 					>
 						<span>{entry.name}</span>
-						{entry.signedIn && <small className="row-value">Signed in</small>}
+						{entry.signedIn && <small className="row-value">{t("signed_in_badge")}</small>}
 						<ChevronIcon />
 					</button>
 				))}
-				{known && !listed.length && (
-					<p className="empty-note">{query ? "No provider matches." : "No providers available."}</p>
-				)}
+				{known && !listed.length && <p className="empty-note">{query ? t("no_match") : t("no_providers")}</p>}
 			</div>
 		</Sheet>
 	);
@@ -376,6 +367,7 @@ function ProvidersSheetSlot() {
 
 export default defineFacet((host) => {
 	contribute(host, "p2.web-login", (self) => {
+		self.contribute(Translations, messages.translations);
 		self.contribute(SettingsSections, { providers: { label: "Providers", order: 10, Sheet: ProvidersSheetSlot } });
 	});
 });

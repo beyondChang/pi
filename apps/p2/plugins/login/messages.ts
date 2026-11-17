@@ -1,0 +1,63 @@
+// The login plugin's messages, English (the source of truth) and Chinese: the web facet contributes the catalogs to the
+// page's Translations.
+
+import { defineMessages } from "@p2/app/v1";
+
+export const messages = defineMessages("p2.login", {
+	en: {
+		continue_browser: "Continue in browser",
+		enter_code: "Enter this code on the verification page",
+		open_verification: "Open verification page",
+		more_info: "More information",
+		manual_code_hint:
+			"Complete sign-in in the provider tab, then paste the authorization code or final redirect URL below. If you land on an unreachable localhost page, copy its full address from the address bar and paste it here; that page does not need to load.",
+		continue: "Continue",
+		signed_in: "Signed in.",
+		cancelled: "Cancelled.",
+		cancel: "Cancel",
+		done: "Done",
+		signed_in_oauth: "Signed in with a subscription.",
+		signed_in_key: "Signed in with an API key.",
+		not_signed_in: "Not signed in. Environment keys may still apply.",
+		credentials_note: "Credentials are stored on the server.",
+		models_available: (n: number) => `${n} model${n === 1 ? "" : "s"} available.`,
+		no_models: "Catalog updated; no models reported.",
+		updating_catalog: "Updating model catalog…",
+		update_catalog: "Update model catalog",
+		sign_out: "Sign out",
+		sheet_title: "Providers",
+		search_placeholder: "Search providers",
+		search_aria: "Search providers",
+		signed_in_badge: "Signed in",
+		no_match: "No provider matches.",
+		no_providers: "No providers available.",
+	},
+	zh: {
+		continue_browser: "在浏览器中继续",
+		enter_code: "在验证页面输入此代码",
+		open_verification: "打开验证页面",
+		more_info: "更多信息",
+		manual_code_hint:
+			"在提供商标签页完成登录，然后在下方粘贴授权码或最终跳转 URL。若落到一个无法访问的 localhost 页面，从地址栏复制完整地址粘贴到这里；该页面无需加载。",
+		continue: "继续",
+		signed_in: "已登录。",
+		cancelled: "已取消。",
+		cancel: "取消",
+		done: "完成",
+		signed_in_oauth: "通过订阅登录。",
+		signed_in_key: "通过 API 密钥登录。",
+		not_signed_in: "未登录。环境变量中的密钥仍可能生效。",
+		credentials_note: "凭据保存在服务器上。",
+		models_available: (n: number) => `可用模型 ${n} 个。`,
+		no_models: "目录已更新；未报告模型。",
+		updating_catalog: "正在更新模型目录…",
+		update_catalog: "更新模型目录",
+		sign_out: "退出登录",
+		sheet_title: "提供商",
+		search_placeholder: "搜索提供商",
+		search_aria: "搜索提供商",
+		signed_in_badge: "已登录",
+		no_match: "没有匹配的提供商。",
+		no_providers: "暂无可用提供商。",
+	},
+});

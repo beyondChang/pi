@@ -1,5 +1,5 @@
 // Bundled on the server, evaluated inside the locked-down worker. No Node transports or local facet loader.
-import type { Link, PluginFacet } from "@earendil-works/chord";
+import { followActiveLanguage, type Link, type PluginFacet, translationsFacet } from "@earendil-works/chord";
 import { BACKGROUND_CONTEXT } from "@earendil-works/chord/context";
 import {
 	type Component,
@@ -22,7 +22,14 @@ import { restoreRuntime, snapshotRuntime } from "../tui/snapshot.ts";
 import { parseTerminalState } from "../tui/theme/theme.ts";
 
 type Bridge = {
-	input: { columns: number; rows: number; origin?: unknown; mouse?: unknown; role?: unknown };
+	input: {
+		columns: number;
+		rows: number;
+		origin?: unknown;
+		mouse?: unknown;
+		role?: unknown;
+		locales?: readonly string[];
+	};
 	send(value: unknown): void;
 	onMessage(handler: (message: Record<string, unknown>) => unknown): void;
 };
@@ -183,7 +190,21 @@ export async function setupTui(bridge: Bridge, facets: readonly PluginFacet<P2Pr
 	let link = new BridgeLink(bridge.send);
 	const linkOptions = { principal: SERVER };
 	host.connect(link, linkOptions, BACKGROUND_CONTEXT);
-	const loaded = await host.load([...facets, { name: "@p2/tui-core", facet: tuiCoreFacet }], BACKGROUND_CONTEXT);
+	const loaded = await host.load(
+		[
+			{ name: "chord.translations", facet: translationsFacet<P2Principal>() },
+			...facets,
+			{ name: "@p2/tui-core", facet: tuiCoreFacet },
+		],
+		BACKGROUND_CONTEXT,
+	);
+	await followActiveLanguage(
+		host,
+		bridge.input.locales ?? [],
+		() => {},
+		() => {},
+		BACKGROUND_CONTEXT,
+	);
 	runtime.origin = typeof bridge.input.origin === "string" ? bridge.input.origin.slice(0, 200) : undefined;
 	// The launcher's admission (a hint from outside the sandbox): owner views hold at once; `Access` confirms it.
 	if (bridge.input.role === "owner" || bridge.input.role === "guest") runtime.role = bridge.input.role;

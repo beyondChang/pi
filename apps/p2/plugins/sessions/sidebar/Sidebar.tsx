@@ -17,9 +17,11 @@ import {
 	SideNavigation,
 	ThemeButton,
 	useLinkHref,
+	useMessages,
 } from "@p2/app/v1/web";
 import { memo, type ReactNode, useEffect, useId, useState } from "react";
 import { GlyphIcon } from "../../glyphs/GlyphIcon.tsx";
+import { messages } from "../messages.ts";
 import { IconMarker, WorkingMark } from "./marks.tsx";
 import type { Glyphs, GroupSection, NewTarget, Section, SidebarRow } from "./model.ts";
 import { NavRow } from "./NavRow.tsx";
@@ -55,6 +57,7 @@ type HeadingActions = {
  * says what its hidden sessions do: its icon framed while one works, how many failed or have a new answer.
  */
 function GroupItem({ group, rows, actions }: { group: GroupSection; rows: RowActions; actions: HeadingActions }) {
+	const { t } = useMessages(messages);
 	const { onCollapse, onNewIn, connected, glyphs } = actions;
 	const { target } = group;
 	const listId = useId();
@@ -62,7 +65,7 @@ function GroupItem({ group, rows, actions }: { group: GroupSection; rows: RowAct
 	const marker = (
 		<IconMarker working={group.hidden.working > 0}>
 			{group.sandboxed ? (
-				<NavLockIcon size={16} aria-label="Sandbox" />
+				<NavLockIcon size={16} aria-label={t("sandbox")} />
 			) : glyph ? (
 				<GlyphIcon seed={glyph.seed} />
 			) : (
@@ -114,6 +117,7 @@ function GroupItem({ group, rows, actions }: { group: GroupSection; rows: RowAct
  * a spinner while one works).
  */
 function RollupGroup({ section, rows, actions }: { section: Section; rows: RowActions; actions: HeadingActions }) {
+	const { t } = useMessages(messages);
 	const { page, onPage, onCollapse, onOptions, glyphs } = actions;
 	const linkHref = useLinkHref();
 	const listId = useId();
@@ -162,7 +166,7 @@ function RollupGroup({ section, rows, actions }: { section: Section; rows: RowAc
 							type="button"
 							className="nav-control rollup-options"
 							aria-label={`${section.name} options`}
-							title="Options"
+							title={t("options")}
 							onClick={() => onOptions(section.key)}
 						>
 							<NavMoreIcon size={16} />
@@ -265,6 +269,7 @@ export const SidebarView = memo(function SidebarView({
 	/** Icon buttons at the footer's end, before the theme switch (the owner's), e.g. the Settings gear. */
 	footerActions?: ReactNode;
 }) {
+	const { t } = useMessages(messages);
 	const linkHref = useLinkHref();
 	// The open session is selected in one place only: where it was opened from, else the first place it shows.
 	const openedFrom = useOpenedFrom();
@@ -296,20 +301,20 @@ export const SidebarView = memo(function SidebarView({
 	);
 	if (guest)
 		return frame(
-			"Shared session",
+			t("shared_session"),
 			<>
 				<div className="brand">
 					<PiLogo compact />
-					<span>Shared session</span>
+					<span>{t("shared_session")}</span>
 				</div>
 				<p className="empty-note">
-					Joined as <strong>{guest.name}</strong>
+					{t("joined_as", guest.name)}
 					<br />
 					{/* The open session's access: sessions may be shared with a guest in different modes. */}
-					{grantMode(guest, activeId) === "full" ? "Read/write" : "Read-only"}
+					{grantMode(guest, activeId) === "full" ? t("read_write") : t("read_only")}
 				</p>
 			</>,
-			<SideNavigation.Root className="sidebar-nav" aria-label="Shared sessions">
+			<SideNavigation.Root className="sidebar-nav" aria-label={t("shared_sessions")}>
 				<SideNavigation.List>
 					{rows.map((session) => (
 						// A guest's list shows each session once.
@@ -328,15 +333,15 @@ export const SidebarView = memo(function SidebarView({
 			</>,
 		);
 	return frame(
-		"Sessions",
+		t("sessions"),
 		<div className="drawer-header-row">
 			<div className="brand">
 				<PiLogo compact />
 			</div>
 			{headerActions}
-			<Sidebar.Trigger className="collapse-sidebar" aria-label="Collapse sidebar" />
+			<Sidebar.Trigger className="collapse-sidebar" aria-label={t("collapse_sidebar")} />
 		</div>,
-		<SideNavigation.Root className="sidebar-nav" aria-label="Rollups">
+		<SideNavigation.Root className="sidebar-nav" aria-label={t("rollups")}>
 			<SideNavigation.List className="sidebar-start">
 				{startRows}
 				<SideNavigation.Item>

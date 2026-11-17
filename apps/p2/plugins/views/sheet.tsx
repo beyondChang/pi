@@ -9,6 +9,7 @@ import {
 	PencilIcon,
 	Sheet,
 	useComposerState,
+	useMessages,
 	useObject,
 	useReadable,
 	useRoute,
@@ -19,6 +20,7 @@ import { type FormEvent, useState } from "react";
 import { type OpenInput, type View, Views } from "./contract.ts";
 import { viewsIn } from "./layout.ts";
 import { hide, setAnnotateMode, show, useAnnotateMode, useLayout } from "./layout-store.ts";
+import { messages } from "./messages.ts";
 
 const SHEET = "views";
 
@@ -27,6 +29,7 @@ const SHEET = "views";
  * artifacts' counter, it stays out of the bar until there is something to show).
  */
 export function ViewActions() {
+	const { t } = useMessages(messages);
 	const route = useRoute();
 	const mode = useAnnotateMode();
 	const sheet = useSheet(SHEET);
@@ -37,9 +40,9 @@ export function ViewActions() {
 			<button
 				type="button"
 				className={`icon-button views-annotate-toggle ${mode !== "off" ? "on" : ""}`}
-				aria-label="Annotate"
+				aria-label={t("annotate_aria")}
 				aria-pressed={mode !== "off"}
-				title="Annotate: comment, mark for removal, draw"
+				title={t("annotate_title")}
 				onClick={() => setAnnotateMode(mode === "off" ? "text" : "off")}
 			>
 				<PencilIcon />
@@ -48,8 +51,8 @@ export function ViewActions() {
 				<button
 					type="button"
 					className="icon-button views-toggle"
-					aria-label="Views"
-					title="Views"
+					aria-label={t("views_aria")}
+					title={t("views_title")}
 					onClick={() => openLayer({ kind: "sheet", name: SHEET })}
 				>
 					<PanelSideIcon />
@@ -61,6 +64,7 @@ export function ViewActions() {
 }
 
 function ViewsSheet({ session }: { session: string }) {
+	const { t } = useMessages(messages);
 	const views = useObject(Views, { session });
 	useStatus(views);
 	const editor = liveIn(views, "editor");
@@ -83,8 +87,8 @@ function ViewsSheet({ session }: { session: string }) {
 	};
 
 	return (
-		<Sheet title="Views" onClose={closeLayers} testId="views-sheet">
-			<h3 className="views-sheet-head">In this session</h3>
+		<Sheet title={t("sheet_title")} onClose={closeLayers} testId="views-sheet">
+			<h3 className="views-sheet-head">{t("in_session")}</h3>
 			{list.length ? (
 				<ul className="views-list">
 					{list.map((view) => (
@@ -95,7 +99,7 @@ function ViewsSheet({ session }: { session: string }) {
 							</div>
 							{placed.has(view.id) && !layout.hidden.includes(view.id) ? (
 								<button type="button" className="text-action" onClick={() => hide(session, view.id)}>
-									Hide
+									{t("hide")}
 								</button>
 							) : (
 								<button
@@ -106,7 +110,7 @@ function ViewsSheet({ session }: { session: string }) {
 										closeLayers();
 									}}
 								>
-									Show
+									{t("show")}
 								</button>
 							)}
 							{editor &&
@@ -119,35 +123,35 @@ function ViewsSheet({ session }: { session: string }) {
 											editor.close({ id: view.id }, BACKGROUND_CONTEXT).catch(fail);
 										}}
 									>
-										Close for everyone
+										{t("close_for_everyone")}
 									</button>
 								) : (
 									<button type="button" className="text-action" onClick={() => setClosing(view.id)}>
-										Close
+										{t("close")}
 									</button>
 								))}
 						</li>
 					))}
 				</ul>
 			) : (
-				<p className="empty-note">No views yet. Ask the agent for one, or add one below.</p>
+				<p className="empty-note">{t("empty")}</p>
 			)}
 			{editor && (
 				<>
-					<h3 className="views-sheet-head">Add</h3>
+					<h3 className="views-sheet-head">{t("add")}</h3>
 					<div className="views-add">
 						<button type="button" className="text-action" onClick={() => void open({ kind: "changes" })}>
-							Changes in the working tree
+							{t("changes_tree")}
 						</button>
 						<form onSubmit={openMarkdown}>
 							<input
 								value={path}
 								onChange={(event) => setPath(event.target.value)}
-								placeholder="Markdown file, e.g. docs/notes.md"
-								aria-label="Markdown file"
+								placeholder={t("md_placeholder")}
+								aria-label={t("md_aria")}
 							/>
 							<button type="submit" className="text-action" disabled={!path.trim()}>
-								Open
+								{t("open")}
 							</button>
 						</form>
 					</div>
@@ -180,6 +184,7 @@ export function describe(view: View): string {
 
 /** In the composer: the selections and annotations the next message carries, which the person may drop. */
 export function ContextChip() {
+	const { t } = useMessages(messages);
 	const session = useRoute().session;
 	const views = useObject(Views, session ? { session } : undefined);
 	useStatus(views);
@@ -196,20 +201,20 @@ export function ContextChip() {
 	if (!editor || (!selections.length && !pending)) return null;
 	const words = [
 		selections.length === 1
-			? `Selection in ${selections[0]?.title}`
+			? t("selection_one", selections[0]?.title ?? "")
 			: selections.length
-				? `${selections.length} selections`
+				? t("selection_many", selections.length)
 				: "",
-		pending ? `${pending} note${pending === 1 ? "" : "s"}` : "",
+		pending ? `${pending} ${t(pending === 1 ? "note_one" : "note_many")}` : "",
 	]
 		.filter(Boolean)
 		.join(" · ");
 	return (
-		<span className="chip on views-chip" title="Your next message carries these to the agent">
+		<span className="chip on views-chip" title={t("chip_title")}>
 			<span>{words}</span>
 			<button
 				type="button"
-				aria-label="Do not send them"
+				aria-label={t("chip_discard")}
 				onPointerDown={(event) => event.preventDefault()}
 				onClick={() => editor.discard(BACKGROUND_CONTEXT).catch(fail)}
 			>

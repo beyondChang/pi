@@ -2,7 +2,7 @@
 // bar's button counting every kind's items and the side panel listing them (opening one opens a view of its kind, or
 // for a reader shows it in the panel), the artifact tools' activities (`artifact_show` in place), the artifact
 // commands (commands.tsx), and the viewer of sent files over the chat (viewer.ts).
-import { BACKGROUND_CONTEXT, contribute, defineFacet, serveKeyed } from "@p2/app/v1";
+import { BACKGROUND_CONTEXT, contribute, defineFacet, serveKeyed, Translations } from "@p2/app/v1";
 import {
 	ArtifactIcon,
 	type ArtifactItem,
@@ -24,6 +24,7 @@ import {
 	ToolActivities,
 	useComposerState,
 	useLinkHref,
+	useMessages,
 	useObject,
 	useRegistry,
 	useRoute,
@@ -40,6 +41,7 @@ import { ARTIFACT_COMMANDS, ARTIFACT_PAGES, ARTIFACT_SEARCH } from "./commands.t
 import { HtmlPane, MdPane } from "./panes.tsx";
 import "./artifacts.css";
 import { type LocalItem, PANEL, showLocally, useLocalItem } from "./local-item.ts";
+import { messages } from "./messages.ts";
 import { useArtifacts } from "./use-artifacts.ts";
 import { viewerItem, viewerLayer } from "./viewer.ts";
 
@@ -113,6 +115,7 @@ function ArtifactsPanel({ session }: { session: string }) {
 
 /** The item a reader opened, in the side panel: its pane, not editable; Back returns to the list. */
 function LocalItemPanel({ session, item }: { session: string; item: LocalItem }) {
+	const { t } = useMessages(messages);
 	const Pane = useRegistry(ViewKinds).get(item.kind)?.Pane;
 	const close = () => {
 		showLocally(session, undefined);
@@ -122,7 +125,7 @@ function LocalItemPanel({ session, item }: { session: string; item: LocalItem })
 		<SidePanel title={item.title} onClose={close} testId="artifact-panel">
 			<div className="artifact-local" data-artifact={item.id}>
 				<button type="button" className="text-action" onClick={() => showLocally(session, undefined)}>
-					All artifacts
+					{t("all")}
 				</button>
 				{Pane ? (
 					<Pane
@@ -134,7 +137,7 @@ function LocalItemPanel({ session, item }: { session: string; item: LocalItem })
 						annotations={[]}
 					/>
 				) : (
-					<p className="empty-note">Unknown view kind "{item.kind}"</p>
+					<p className="empty-note">{t("unknown_kind", item.kind)}</p>
 				)}
 			</div>
 		</SidePanel>
@@ -143,10 +146,11 @@ function LocalItemPanel({ session, item }: { session: string; item: LocalItem })
 
 /** Every kind's items, the newest first. */
 function ItemList({ session, kinds }: { session: string; kinds: ReadonlyMap<string, ArtifactKind> }) {
+	const { t } = useMessages(messages);
 	const [counts, setCounts] = useState<Record<string, number>>({});
 	const total = Object.values(counts).reduce((sum, count) => sum + count, 0);
 	return (
-		<SidePanel title="Artifacts" onClose={closePanel} testId="artifact-panel">
+		<SidePanel title={t("panel_title")} onClose={closePanel} testId="artifact-panel">
 			{[...kinds].map(([name, kind]) => (
 				<KindSection
 					key={name}
@@ -157,7 +161,7 @@ function ItemList({ session, kinds }: { session: string; kinds: ReadonlyMap<stri
 					}
 				/>
 			))}
-			{total === 0 && <p className="empty-note">No artifacts in this session.</p>}
+			{total === 0 && <p className="empty-note">{t("empty")}</p>}
 		</SidePanel>
 	);
 }
@@ -177,6 +181,7 @@ function KindSection({
 	const views = useObject(Views, { session }, { variant: "editor" });
 	const viewsPage = useRegistry(ViewsPages).get("views");
 	const { fail } = useComposerState();
+	const { t } = useMessages(messages);
 	const count = items?.length ?? 0;
 	useEffect(() => onCount(count), [count, onCount]);
 	if (!items?.length) return null;
@@ -199,7 +204,7 @@ function KindSection({
 							type="button"
 							className="artifact-row"
 							onClick={() => void open(item)}
-							aria-label={`Open ${item.title}`}
+							aria-label={t("open", item.title)}
 						>
 							{Row ? (
 								<Row item={item} />
@@ -218,10 +223,10 @@ function KindSection({
 							<button
 								type="button"
 								className="text-action"
-								aria-label={`Remove ${item.title}`}
+								aria-label={t("remove_aria", item.title)}
 								onClick={() => remove(item.id).catch(fail)}
 							>
-								Remove
+								{t("remove")}
 							</button>
 						)}
 					</div>
@@ -233,6 +238,7 @@ function KindSection({
 
 /** The top bar's button: every kind's items counted (each kind's count in a component of its own), opening the panel. */
 function ArtifactButton() {
+	const { t } = useMessages(messages);
 	const route = useRoute();
 	const kinds = useRegistry(ArtifactKinds);
 	const [counts, setCounts] = useState<Record<string, number>>({});
@@ -256,7 +262,7 @@ function ArtifactButton() {
 				<button
 					type="button"
 					className={`artifact-button ${open ? "on" : ""}`}
-					aria-label={`Artifacts (${total})`}
+					aria-label={t("button_aria", total)}
 					aria-pressed={open}
 					onClick={() => (open ? closePanel() : openPanel(PANEL))}
 				>
@@ -286,6 +292,7 @@ function KindCount({
 export default defineFacet((host) => {
 	serveKeyed(host, ArtifactKinds);
 	contribute(host, "p2.web-artifacts", (self) => {
+		self.contribute(Translations, messages.translations);
 		self.contribute(Slots, { "chat-content": Content, "artifact-actions": ArtifactButton });
 		self.contribute(ArtifactKinds, { html: artifactKind("html", "Pages"), md: artifactKind("md", "Documents") });
 		self.contribute(ViewKinds, { html: { Pane: HtmlPane }, md: { Pane: MdPane } });

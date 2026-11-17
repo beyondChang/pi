@@ -1,7 +1,7 @@
 // The owner's telemetry (web): the Traces view kind (a pane of the session's views), the Traces section of Settings
 // (the same browser, its open trace a layer of the sheet), and the command menu's "Show traces" (a view of the open
 // session, else the Settings section). Owners only: guests get no command or section, and the pane says so.
-import { BACKGROUND_CONTEXT, contribute, defineFacet, withHeld } from "@p2/app/v1";
+import { BACKGROUND_CONTEXT, contribute, defineFacet, Translations, withHeld } from "@p2/app/v1";
 import {
 	type CommandContext,
 	Commands,
@@ -11,6 +11,7 @@ import {
 	openSettings,
 	SettingsSections,
 	Sheet,
+	useMessages,
 	useOwner,
 	useSheet,
 } from "@p2/app/v1/web";
@@ -18,6 +19,7 @@ import { useState } from "react";
 import { Views } from "../views/contract.ts";
 import { ViewsPages } from "../views/contract.web.ts";
 import { ViewKinds } from "../views/kinds.ts";
+import { messages } from "./messages.ts";
 import { TracesBrowser } from "./traces.tsx";
 import "./traces.css";
 
@@ -26,19 +28,21 @@ const TRACES = "traces";
 
 /** The Traces view's pane: the browser, its open trace the pane's own. */
 function TracesPane() {
+	const { t } = useMessages(messages);
 	const owner = useOwner();
 	const [open, setOpen] = useState<string>();
-	if (!owner) return <p className="empty-note">Traces are the owner's.</p>;
+	if (!owner) return <p className="empty-note">{t("owner_only")}</p>;
 	return <TracesBrowser open={open} onOpen={setOpen} onBack={() => setOpen(undefined)} />;
 }
 
 /** The Traces section of Settings while it is open (the owner): a trace opens as a layer above the list. */
 function TracesSheetSlot() {
+	const { t } = useMessages(messages);
 	const sheet = useSheet(TRACES);
 	if (!useOwner() || !sheet) return null;
 	const nav = getNavigation();
 	return (
-		<Sheet title="Traces" onClose={closeLayers} className="traces-sheet">
+		<Sheet title={t("sheet_title")} onClose={closeLayers} className="traces-sheet">
 			<TracesBrowser
 				open={sheet.locator}
 				onOpen={(traceId) =>
@@ -68,6 +72,7 @@ async function showTraces(ctx: CommandContext): Promise<void> {
 
 export default defineFacet((host) => {
 	contribute(host, "p2.web-telemetry", (self) => {
+		self.contribute(Translations, messages.translations);
 		self.contribute(ViewKinds, { [TRACES]: { Pane: TracesPane } });
 		self.contribute(SettingsSections, { [TRACES]: { label: "Traces", order: 85, Sheet: TracesSheetSlot } });
 		self.contribute(Commands, {

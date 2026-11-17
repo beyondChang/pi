@@ -1,6 +1,7 @@
 // Browser runtime: the client host in React, slots that plugins fill, object hooks, connection state, navigation.
 
 import type { Contract, Held, ParamsOf } from "@earendil-works/chord";
+import { hostLanguage, type Messages, type Translator } from "@earendil-works/chord";
 import { BACKGROUND_CONTEXT } from "@earendil-works/chord/context";
 import type { NativeWatchable, Watchable } from "@earendil-works/chord/watch";
 import {
@@ -10,6 +11,7 @@ import {
 	useContext,
 	useEffect,
 	useLayoutEffect,
+	useMemo,
 	useOptimistic,
 	useRef,
 	useState,
@@ -340,6 +342,21 @@ export function useReadable<T>(readable: Watchable<T> | NativeWatchable<T> | und
 	);
 	const read = useCallback(() => readValue(readable), [readable]);
 	return useSyncExternalStore(subscribe, read, read);
+}
+
+/**
+ * `messages` in the page's language (the user's pick, else the device's, matched against the catalogs), with its
+ * locale; re-renders when the locale or a translation changes. Before the host follows a language, `t` renders the
+ * first catalog.
+ */
+export function useMessages<N extends string, M>(
+	messages: Messages<N, M>,
+): { readonly t: Translator<N, M>; readonly locale: string | undefined } {
+	const host = useHost();
+	const state = hostLanguage(host);
+	const language = useSyncExternalStore(state.subscribe, state.read, state.read);
+	const t = useMemo(() => messages.in(language), [messages, language]);
+	return { t, locale: language?.locale };
 }
 
 /** A watchable's value, or `undefined` while it cannot be read (not bound, outside the variant, ended). */

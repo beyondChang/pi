@@ -1,6 +1,7 @@
-import { contribute, defineFacet } from "@p2/app/v1";
+import { contribute, defineFacet, Translations } from "@p2/app/v1";
 import { closeLayers, SettingsSections, useOwner, useSheet } from "@p2/app/v1/web";
 import { EnvsPanel } from "./EnvsPanel.tsx";
+import { messages } from "./messages.ts";
 import "./style.css";
 
 /** The Environments sheet while it is open (the owner): on its own, or as a page of Settings. */
@@ -11,6 +12,7 @@ function EnvsSheet() {
 
 export default defineFacet((host) => {
 	contribute(host, "p2.web-envs", (self) => {
+		self.contribute(Translations, messages.translations);
 		self.contribute(SettingsSections, {
 			envs: { label: "Environments", title: "Remote environments", order: 30, Sheet: EnvsSheet },
 		});

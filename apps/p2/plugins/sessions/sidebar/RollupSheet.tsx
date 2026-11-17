@@ -1,8 +1,9 @@
 // A rollup's options sheet: how long the sidebar shows a session nothing else keeps in view, and the rollup's place;
 // for a rollup made from code, when it refreshes, when it was last checked, why its last run failed, and Refresh now.
-import { CheckIcon, Sheet } from "@p2/app/v1/web";
+import { CheckIcon, Sheet, useMessages } from "@p2/app/v1/web";
 import type { Refresh } from "../../rollups/contract.ts";
 import type { SidebarWindow } from "../contract.ts";
+import { messages } from "../messages.ts";
 import { type Section, WINDOWS } from "./model.ts";
 import { ago } from "./Row.tsx";
 
@@ -33,13 +34,14 @@ export function RollupSheet({
 	onMove: { up?: () => void; down?: () => void };
 	onClose: () => void;
 }) {
+	const { t } = useMessages(messages);
 	return (
 		<Sheet title={section.name} onClose={onClose}>
 			<div className="list">
 				{code && <CodeOptions code={code} now={now} />}
 				{section.layout !== "link" && section.window !== "none" && (
 					<>
-						<h3 className="label">Show sessions active within</h3>
+						<h3 className="label">{t("active_within")}</h3>
 						{WINDOWS.map(({ window, label }) => (
 							<button
 								type="button"
@@ -52,17 +54,17 @@ export function RollupSheet({
 								{section.window === window && <CheckIcon />}
 							</button>
 						))}
-						<p className="muted small">Pinned, open, working, unread and failed sessions always show.</p>
+						<p className="muted small">{t("pinned_always")}</p>
 					</>
 				)}
 				{onMove.up && (
 					<button type="button" className="row-button" onClick={onMove.up}>
-						<span>Move up</span>
+						<span>{t("move_up")}</span>
 					</button>
 				)}
 				{onMove.down && (
 					<button type="button" className="row-button" onClick={onMove.down}>
-						<span>Move down</span>
+						<span>{t("move_down")}</span>
 					</button>
 				)}
 			</div>
@@ -72,25 +74,26 @@ export function RollupSheet({
 
 /** When a rollup made from code refreshes, its last check or failure, and Refresh now unless it refreshes itself. */
 function CodeOptions({ code, now }: { code: CodeSource; now: number }) {
+	const { t } = useMessages(messages);
 	const when =
 		code.refresh.kind === "auto"
-			? "Refreshes when its sessions change"
+			? t("refresh_auto")
 			: code.refresh.kind === "every"
-				? `Refreshes every ${code.refresh.minutes} min when its sessions changed`
-				: "Refreshes only by hand";
+				? t("refresh_every", code.refresh.minutes)
+				: t("refresh_manual");
 	const since = code.checkedAt === null ? undefined : ago(code.checkedAt, now);
 	// `ago` says "now", "5m" or "3h" up to a week, then a date.
 	const checked =
 		since === undefined
-			? "Not run yet"
+			? t("not_run_yet")
 			: since === "now"
-				? "Checked just now"
+				? t("checked_now")
 				: /^\d/.test(since)
-					? `Checked ${since} ago`
-					: `Checked on ${since}`;
+					? t("checked_ago", since)
+					: t("checked_on", since);
 	return (
 		<>
-			<h3 className="label">Made from code</h3>
+			<h3 className="label">{t("code_source")}</h3>
 			<p className="muted small">
 				{when}. {checked}.
 			</p>
@@ -102,7 +105,7 @@ function CodeOptions({ code, now }: { code: CodeSource; now: number }) {
 					disabled={!code.onRefresh || code.refreshing}
 					onClick={code.onRefresh}
 				>
-					<span>{code.refreshing ? "Refreshing…" : "Refresh now"}</span>
+					<span>{code.refreshing ? t("refreshing") : t("refresh_now")}</span>
 				</button>
 			)}
 		</>

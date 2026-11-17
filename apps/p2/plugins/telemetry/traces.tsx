@@ -1,17 +1,18 @@
 // The owner's traces in the page: a search (the earliest span's name, attributes, errors, a time window), the traces
 // found (newest first, more by cursor), and one trace as a tree of spans with their lengths on the trace's timeline,
 // attributes, events and links (a link opens its trace). The Traces view's pane and the Settings section show it.
-import { BACKGROUND_CONTEXT } from "@p2/app/v1";
-import { errorText, useObject } from "@p2/app/v1/web";
+import { BACKGROUND_CONTEXT, type MessagesOf, type Translator } from "@p2/app/v1";
+import { errorText, useMessages, useObject } from "@p2/app/v1/web";
 import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { MAX_FILTERS, type Span, type Trace, type TraceQuery, type TraceSummary, Traces } from "./contract.ts";
+import { messages } from "./messages.ts";
 
 /** The windows a search may look back over, in milliseconds (0: all the store keeps). */
 const WINDOWS = [
-	{ label: "15 min", ms: 15 * 60_000 },
-	{ label: "1 hour", ms: 60 * 60_000 },
-	{ label: "24 hours", ms: 24 * 60 * 60_000 },
-	{ label: "7 days", ms: 0 },
+	{ label: "window_15m", ms: 15 * 60_000 },
+	{ label: "window_1h", ms: 60 * 60_000 },
+	{ label: "window_24h", ms: 24 * 60 * 60_000 },
+	{ label: "window_7d", ms: 0 },
 ] as const;
 
 /**
@@ -39,6 +40,7 @@ export function TracesBrowser({
 
 /** The search form and the traces found. */
 function TraceSearch({ open, onOpen }: { open: string | undefined; onOpen: (traceId: string) => void }) {
+	const { t } = useMessages(messages);
 	const traces = useObject(Traces, {}, { variant: "owner" });
 	const [name, setName] = useState("");
 	const [attributes, setAttributes] = useState("");
@@ -71,7 +73,7 @@ function TraceSearch({ open, onOpen }: { open: string | undefined; onOpen: (trac
 
 	const submit = (event?: FormEvent) => {
 		event?.preventDefault();
-		const filters = parseAttributes(attributes);
+		const filters = parseAttributes(t, attributes);
 		if (typeof filters === "string") return setMessage(filters);
 		void search(
 			{
@@ -91,41 +93,41 @@ function TraceSearch({ open, onOpen }: { open: string | undefined; onOpen: (trac
 	}, [traces]);
 
 	return (
-		<section className="traces-search" aria-label="Traces">
+		<section className="traces-search" aria-label={t("sheet_title")}>
 			<form className="traces-form" onSubmit={submit}>
 				<input
 					className="input"
-					aria-label="Span name"
-					placeholder="First span's name (chord.hold, pi.durable.submit…)"
+					aria-label={t("aria_name")}
+					placeholder={t("placeholder_name")}
 					value={name}
 					onChange={(event) => setName(event.target.value)}
 				/>
 				<input
 					className="input"
-					aria-label="Attributes"
-					placeholder="Attributes: key=value, …"
+					aria-label={t("aria_attributes")}
+					placeholder={t("placeholder_attributes")}
 					value={attributes}
 					onChange={(event) => setAttributes(event.target.value)}
 				/>
 				<div className="traces-form-row">
 					<select
 						className="input"
-						aria-label="Time window"
+						aria-label={t("aria_window")}
 						value={window}
 						onChange={(event) => setWindow(Number(event.target.value))}
 					>
 						{WINDOWS.map((each) => (
 							<option key={each.label} value={each.ms}>
-								{each.label}
+								{t(each.label)}
 							</option>
 						))}
 					</select>
 					<label className="traces-errors">
 						<input type="checkbox" checked={errors} onChange={(event) => setErrors(event.target.checked)} />
-						Errors only
+						{t("errors_only")}
 					</label>
 					<button type="submit" className="button" disabled={!traces || loading}>
-						Search
+						{t("search")}
 					</button>
 				</div>
 			</form>
@@ -139,19 +141,19 @@ function TraceSearch({ open, onOpen }: { open: string | undefined; onOpen: (trac
 							onClick={() => onOpen(trace.traceId)}
 						>
 							<span className="traces-row-name">
-								{trace.errors > 0 && <span className="traces-failed">Failed</span>}
+								{trace.errors > 0 && <span className="traces-failed">{t("failed")}</span>}
 								{trace.name}
 							</span>
 							<span className="traces-row-meta">
-								{clock(trace.startedMs)} · {duration(trace.durationMs)} · {trace.spans} span
-								{trace.spans === 1 ? "" : "s"} · {trace.hosts.map(hostLabel).join(", ")}
+								{clock(trace.startedMs)} · {duration(trace.durationMs)} · {trace.spans}{" "}
+								{t(trace.spans === 1 ? "spans_one" : "spans_many")} · {trace.hosts.map(hostLabel).join(", ")}
 							</span>
 						</button>
 					</li>
 				))}
 			</ul>
-			{found && found.traces.length === 0 && <p className="empty-note">No traces</p>}
-			{!found && !message && <p className="empty-note">{traces ? "Searching…" : "Loading…"}</p>}
+			{found && found.traces.length === 0 && <p className="empty-note">{t("no_traces")}</p>}
+			{!found && !message && <p className="empty-note">{traces ? t("searching") : t("loading")}</p>}
 			{found?.cursor !== undefined && (
 				<button
 					type="button"
@@ -159,7 +161,7 @@ function TraceSearch({ open, onOpen }: { open: string | undefined; onOpen: (trac
 					disabled={loading}
 					onClick={() => found.cursor && void search({ ...found.query, cursor: found.cursor }, found.traces)}
 				>
-					Load more
+					{t("load_more")}
 				</button>
 			)}
 		</section>
@@ -176,6 +178,7 @@ function TraceDetail({
 	onOpen: (traceId: string) => void;
 	onBack: () => void;
 }) {
+	const { t } = useMessages(messages);
 	const traces = useObject(Traces, {}, { variant: "owner" });
 	const [trace, setTrace] = useState<{ id: string; value?: Trace | null; error?: string }>();
 	useEffect(() => {
@@ -191,17 +194,17 @@ function TraceDetail({
 	}, [traces, traceId]);
 	const shown = trace?.id === traceId ? trace : undefined;
 	return (
-		<section className="traces-detail" aria-label="Trace">
+		<section className="traces-detail" aria-label={t("sheet_title")}>
 			<div className="traces-detail-head">
 				<button type="button" className="text-action traces-back" onClick={onBack}>
-					All traces
+					{t("all_traces")}
 				</button>
 				<code className="traces-id">{traceId}</code>
 			</div>
 			{shown?.error ? (
 				<output className="notice error">{shown.error}</output>
 			) : shown?.value === null ? (
-				<p className="empty-note">No such trace (never recorded, or older than 7 days)</p>
+				<p className="empty-note">{t("no_trace")}</p>
 			) : shown?.value ? (
 				<SpanTree trace={shown.value} onOpen={onOpen} />
 			) : (
@@ -234,6 +237,7 @@ function treeRows(trace: Trace): Row[] {
 
 /** The trace's spans as rows with their place on the trace's timeline. */
 function SpanTree({ trace, onOpen }: { trace: Trace; onOpen: (traceId: string) => void }) {
+	const { t } = useMessages(messages);
 	const rows = useMemo(() => treeRows(trace), [trace]);
 	const [open, setOpen] = useState<string>();
 	const start = Math.min(...trace.spans.map((span) => span.startedMs));
@@ -242,8 +246,8 @@ function SpanTree({ trace, onOpen }: { trace: Trace; onOpen: (traceId: string) =
 	return (
 		<>
 			<p className="traces-summary">
-				{clock(start)} · {duration(end - start)} · {trace.spans.length} spans
-				{trace.truncated ? " (only the first 2000)" : ""}
+				{clock(start)} · {duration(end - start)} · {t("spans_summary", trace.spans.length)}
+				{trace.truncated ? t("truncated") : ""}
 			</p>
 			<ul className="traces-tree">
 				{rows.map(({ span, depth }) => {
@@ -261,7 +265,7 @@ function SpanTree({ trace, onOpen }: { trace: Trace; onOpen: (traceId: string) =
 									className="traces-span-name"
 									style={{ paddingInlineStart: `${Math.min(depth, 12) * 12}px` }}
 								>
-									{failed && <span className="traces-failed">Failed</span>}
+									{failed && <span className="traces-failed">{t("failed")}</span>}
 									{span.name} {spanLabel(span)}
 								</span>
 								<span className="traces-span-meta">
@@ -287,6 +291,7 @@ function SpanTree({ trace, onOpen }: { trace: Trace; onOpen: (traceId: string) =
 
 /** A span's attributes, failure, events (by their offset in the trace) and links. */
 function SpanDetail({ span, start, onOpen }: { span: Span; start: number; onOpen: (traceId: string) => void }) {
+	const { t } = useMessages(messages);
 	return (
 		<div className="traces-span-detail">
 			<p className="traces-muted">
@@ -300,7 +305,7 @@ function SpanDetail({ span, start, onOpen }: { span: Span; start: number; onOpen
 			<Attributes attributes={span.attributes} />
 			{span.events.length > 0 && (
 				<>
-					<h4>Events</h4>
+					<h4>{t("events")}</h4>
 					<ul className="traces-events">
 						{span.events.map((event, index) => (
 							// biome-ignore lint/suspicious/noArrayIndexKey: a span's events never change.
@@ -316,14 +321,14 @@ function SpanDetail({ span, start, onOpen }: { span: Span; start: number; onOpen
 			)}
 			{span.links.length > 0 && (
 				<>
-					<h4>Links</h4>
+					<h4>{t("links")}</h4>
 					<ul className="traces-events">
 						{span.links.map((link) => (
 							<li key={`${link.traceId}:${link.spanId}`}>
 								<button type="button" className="text-action" onClick={() => onOpen(link.traceId)}>
-									Trace {link.traceId}
+									{t("link_trace", link.traceId)}
 								</button>
-								<span className="traces-muted"> span {link.spanId}</span>
+								<span className="traces-muted">{t("link_span", link.spanId)}</span>
 								{link.attributes && <Attributes attributes={link.attributes} />}
 							</li>
 						))}
@@ -376,16 +381,19 @@ function duration(ms: number): string {
 }
 
 /** `key=value, …` as equalities (a number or `true`/`false` typed as such), or why it is not. */
-function parseAttributes(text: string): Record<string, string | number | boolean> | string {
+function parseAttributes(
+	t: Translator<"p2.telemetry", MessagesOf<typeof messages>>,
+	text: string,
+): Record<string, string | number | boolean> | string {
 	const out: Record<string, string | number | boolean> = {};
 	for (const part of text.split(",").map((each) => each.trim())) {
 		if (!part) continue;
 		const at = part.indexOf("=");
-		if (at < 1) return `"${part}": write attributes as key=value`;
+		if (at < 1) return t("attr_error", part);
 		const value = part.slice(at + 1).trim();
 		out[part.slice(0, at).trim()] =
 			value === "true" ? true : value === "false" ? false : /^-?\d+(\.\d+)?$/.test(value) ? Number(value) : value;
 	}
-	if (Object.keys(out).length > MAX_FILTERS) return `At most ${MAX_FILTERS} attributes`;
+	if (Object.keys(out).length > MAX_FILTERS) return t("attr_too_many", MAX_FILTERS);
 	return out;
 }

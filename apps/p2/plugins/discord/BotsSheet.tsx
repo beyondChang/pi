@@ -11,6 +11,7 @@ import {
 	navigate,
 	openLayer,
 	Sheet,
+	useMessages,
 	useObject,
 	useReadable,
 } from "@p2/app/v1/web";
@@ -18,6 +19,7 @@ import { useState } from "react";
 import { Sessions } from "../sessions/contract.ts";
 import type { BotStatus, BotView } from "./contract.ts";
 import { useDiscord } from "./held.ts";
+import { messages } from "./messages.ts";
 
 const NO_AUTOCORRECT = { autoCapitalize: "off", autoCorrect: "off", spellCheck: false } as const;
 
@@ -54,11 +56,12 @@ function Avatar({ bot }: { bot: BotView }) {
 
 /** Settings › Discord: the bots, and Add bot. */
 export function BotsSheet() {
+	const { t } = useMessages(messages);
 	const bots = useReadable(useDiscord()?.bots);
 	return (
-		<Sheet title="Discord" onClose={closeLayers} className="discord-sheet">
+		<Sheet title={t("title")} onClose={closeLayers} className="discord-sheet">
 			<div className="list">
-				<span className="label">Bots</span>
+				<span className="label">{t("bots")}</span>
 				{bots?.map((bot) => (
 					<button
 						type="button"
@@ -72,41 +75,40 @@ export function BotsSheet() {
 						<ChevronIcon />
 					</button>
 				))}
-				{bots && !bots.length && <p className="empty-note">No bots yet.</p>}
+				{bots && !bots.length && <p className="empty-note">{t("no_bots")}</p>}
 				<button
 					type="button"
 					className="row-button"
 					onClick={() => openLayer({ kind: "sheet", name: "discord-add" })}
 				>
-					<span>Add bot</span>
+					<span>{t("add_bot")}</span>
 					<ChevronIcon />
 				</button>
 			</div>
-			<p className="muted small discord-hint">
-				To let a channel talk to a session, open the session's sheet and choose Discord.
-			</p>
+			<p className="muted small discord-hint">{t("hint")}</p>
 		</Sheet>
 	);
 }
 
 /** Add bot: its token, Connect; once Discord accepts it, the bot's sheet replaces this one. */
 export function AddBotSheet() {
+	const { t } = useMessages(messages);
 	const discord = useDiscord();
 	const [token, setToken] = useState("");
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<string>();
 	return (
-		<Sheet title="Add bot" onClose={closeLayers} onBack={back} className="discord-sheet">
+		<Sheet title={t("add_bot")} onClose={closeLayers} onBack={back} className="discord-sheet">
 			<ol className="discord-steps muted small">
 				<li>
 					At{" "}
 					<a href="https://discord.com/developers/applications" target="_blank" rel="noreferrer">
 						discord.com/developers
 					</a>{" "}
-					create an application, then open Bot.
+					{t("step_1")}
 				</li>
-				<li>Turn on Message Content Intent.</li>
-				<li>Reset Token, copy it, and paste it here.</li>
+				<li>{t("step_2")}</li>
+				<li>{t("step_3")}</li>
 			</ol>
 			<form
 				className="stack"
@@ -134,15 +136,15 @@ export function AddBotSheet() {
 					className="input mono"
 					type="password"
 					autoComplete="off"
-					aria-label="Bot token"
-					placeholder="Bot token"
+					aria-label={t("bot_token")}
+					placeholder={t("bot_token")}
 					value={token}
 					onChange={(event) => setToken(event.target.value)}
 					{...NO_AUTOCORRECT}
 				/>
 				{error && <output className="notice error">{error}</output>}
 				<button type="submit" className="button primary" disabled={busy || token.trim().length < 10}>
-					{busy ? "Connecting…" : "Connect"}
+					{busy ? t("connecting") : t("connect")}
 				</button>
 			</form>
 		</Sheet>
@@ -151,6 +153,7 @@ export function AddBotSheet() {
 
 /** A bot's sheet: who it is, its servers, the invite link, its linked sessions, a new token, removing it. */
 export function BotSheet({ id }: { id: string }) {
+	const { t } = useMessages(messages);
 	const discord = useDiscord();
 	const bots = useReadable(discord?.bots);
 	const bindings = useReadable(discord?.bindings) ?? [];
@@ -162,8 +165,8 @@ export function BotSheet({ id }: { id: string }) {
 	const bot = bots?.find((each) => each.id === id);
 	if (!bot)
 		return (
-			<Sheet title="Bot" onClose={closeLayers} onBack={back} className="discord-sheet">
-				<p className="empty-note">{bots ? "This bot is gone." : "Loading…"}</p>
+			<Sheet title={t("bot")} onClose={closeLayers} onBack={back} className="discord-sheet">
+				<p className="empty-note">{bots ? t("bot_gone") : t("loading")}</p>
 			</Sheet>
 		);
 	const status = bot.status;
@@ -181,49 +184,47 @@ export function BotSheet({ id }: { id: string }) {
 				<Avatar bot={bot} />
 				<p className="muted small">
 					{status.state === "connected"
-						? `Connected as ${status.user}.`
+						? t("connected_as", status.user)
 						: status.state === "connecting"
-							? "Connecting…"
+							? t("connecting")
 							: status.error}
 				</p>
 			</div>
 			<div className="list">
-				<span className="label">Servers</span>
+				<span className="label">{t("servers")}</span>
 				{status.state === "connected" &&
 					status.guilds.map((guild) => (
 						<div key={guild.id} className="discord-row">
 							{guild.name}
 						</div>
 					))}
-				{status.state === "connected" && !status.guilds.length && (
-					<p className="empty-note">In no server yet: invite it with the link below.</p>
-				)}
-				{status.state !== "connected" && <p className="empty-note">Shown once the bot is connected.</p>}
+				{status.state === "connected" && !status.guilds.length && <p className="empty-note">{t("no_servers")}</p>}
+				{status.state !== "connected" && <p className="empty-note">{t("servers_soon")}</p>}
 			</div>
 			<div className="stack discord-invite">
-				<span className="label">Invite to a server</span>
+				<span className="label">{t("invite_to_server")}</span>
 				{status.state === "connected" ? (
 					<>
 						<input
 							className="input mono"
 							readOnly
-							aria-label="Invite link"
+							aria-label={t("invite_link")}
 							value={status.inviteUrl}
 							onFocus={(event) => event.target.select()}
 						/>
 						<div className="inline-form">
-							<CopyButton key={status.inviteUrl} primary text={status.inviteUrl} label="Copy link" />
+							<CopyButton key={status.inviteUrl} primary text={status.inviteUrl} label={t("copy_link")} />
 							<a className="text-action" href={status.inviteUrl} target="_blank" rel="noreferrer">
-								Open
+								{t("open")}
 							</a>
 						</div>
 					</>
 				) : (
-					<p className="muted small">The link shows once the bot is connected.</p>
+					<p className="muted small">{t("invite_soon")}</p>
 				)}
 			</div>
 			<div className="list">
-				<span className="label">Linked sessions</span>
+				<span className="label">{t("linked_sessions")}</span>
 				{links.map((binding) => {
 					const session = sessions.find((each) => each.id === binding.session);
 					return (
@@ -241,7 +242,7 @@ export function BotSheet({ id }: { id: string }) {
 						</button>
 					);
 				})}
-				{!links.length && <p className="empty-note">None. Link a session from its sheet.</p>}
+				{!links.length && <p className="empty-note">{t("none_linked")}</p>}
 			</div>
 			<form
 				className="stack"
@@ -254,20 +255,20 @@ export function BotSheet({ id }: { id: string }) {
 						);
 				}}
 			>
-				<span className="label">Replace token</span>
+				<span className="label">{t("replace_token")}</span>
 				<div className="inline-form">
 					<input
 						className="input mono"
 						type="password"
 						autoComplete="off"
-						aria-label="New bot token"
-						placeholder="New token"
+						aria-label={t("new_bot_token")}
+						placeholder={t("new_bot_token")}
 						value={token}
 						onChange={(event) => setToken(event.target.value)}
 						{...NO_AUTOCORRECT}
 					/>
 					<button type="submit" className="button" disabled={busy || token.trim().length < 10}>
-						Replace
+						{t("replace")}
 					</button>
 				</div>
 			</form>
@@ -276,10 +277,8 @@ export function BotSheet({ id }: { id: string }) {
 				{removing ? (
 					<div className="stack">
 						<p className="muted small">
-							Remove {botName(bot)}?
-							{links.length
-								? ` Its ${links.length} linked session${links.length === 1 ? " is" : "s are"} unlinked.`
-								: ""}
+							{t("remove_question", botName(bot))}
+							{links.length ? (links.length === 1 ? t("unlinked_one") : t("unlinked_many", links.length)) : ""}
 						</p>
 						<div className="inline-form">
 							<button
@@ -288,16 +287,16 @@ export function BotSheet({ id }: { id: string }) {
 								disabled={busy}
 								onClick={() => discord && run(() => discord.removeBot({ bot: id }, BACKGROUND_CONTEXT), back)}
 							>
-								Remove
+								{t("remove")}
 							</button>
 							<button type="button" className="text-action" onClick={() => setRemoving(false)}>
-								Cancel
+								{t("cancel")}
 							</button>
 						</div>
 					</div>
 				) : (
 					<button type="button" className="row-button danger" onClick={() => setRemoving(true)}>
-						<span>Remove bot</span>
+						<span>{t("remove_bot")}</span>
 					</button>
 				)}
 			</div>

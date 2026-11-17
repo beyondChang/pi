@@ -5,7 +5,7 @@
 // new draft; its own history undoes both kinds of change (draft-history.ts).
 
 import { type FileReference, referenceParts } from "@p2/app/v1";
-import { type DraftInput, type PickedFile, pickedReference } from "@p2/app/v1/web";
+import { type DraftInput, type PickedFile, pickedReference, useMessages } from "@p2/app/v1/web";
 import {
 	type ClipboardEvent,
 	type KeyboardEvent,
@@ -18,6 +18,7 @@ import {
 	useState,
 } from "react";
 import { type ChangeKind, DraftHistory } from "./draft-history.ts";
+import { messages } from "./messages.ts";
 
 /** What the composer gives its editor: the draft, its files and the composer's key and focus handlers. */
 export type DraftEditorProps = {
@@ -44,6 +45,7 @@ type PillMenu = { readonly key: string; readonly left: number; readonly bottom: 
 
 /** The draft's editor with pills; see the file comment. */
 export function DraftEditor(props: DraftEditorProps) {
+	const { t } = useMessages(messages);
 	const { draft, setDraft, files, register, inputRef } = props;
 	const ref = useRef<HTMLDivElement>(null);
 	const box = useRef<HTMLDivElement>(null);
@@ -365,7 +367,7 @@ export function DraftEditor(props: DraftEditorProps) {
 				tabIndex={0}
 				role="textbox"
 				aria-multiline="true"
-				aria-label="Message"
+				aria-label={t("message")}
 				data-placeholder={props.placeholder}
 				onInput={(event) => {
 					// A synthetic `input` (not an InputEvent) says nothing about what changed.

@@ -1,9 +1,10 @@
-import { contribute, defineFacet } from "@p2/app/v1";
+import { contribute, defineFacet, Translations } from "@p2/app/v1";
 import {
 	Commands,
 	Slots,
 	TerminalIcon,
 	ToolActivities,
+	useMessages,
 	useNavigation,
 	useObject,
 	useOwner,
@@ -13,6 +14,7 @@ import { useState } from "react";
 import { terminalActivity } from "./activity.tsx";
 import { TERMINAL_COMMANDS } from "./commands.tsx";
 import { Terminals } from "./contract.ts";
+import { messages } from "./messages.ts";
 import { useNewTerminal } from "./new-terminal.ts";
 import { setTerminalPlacement, TerminalPanel, TerminalView, terminalShown, withTerminal } from "./Terminal.tsx";
 
@@ -82,6 +84,7 @@ function Surface({ bottom }: { bottom: boolean }) {
 }
 
 function TerminalButton() {
+	const { t } = useMessages(messages);
 	const nav = useNavigation();
 	const route = useRoute();
 	if (!useOwner() || !route.session) return null;
@@ -90,7 +93,7 @@ function TerminalButton() {
 		<button
 			type="button"
 			className={`icon-button workspace-toggle ${open ? "on" : ""}`}
-			aria-label="Terminal"
+			aria-label={t("button_aria")}
 			aria-pressed={open}
 			onClick={() => {
 				if (route.terminal !== undefined)
@@ -114,6 +117,7 @@ function WorkspaceTerminal() {
 
 export default defineFacet((host) => {
 	contribute(host, "p2.web-terminals", (self) => {
+		self.contribute(Translations, messages.translations);
 		self.contribute(Slots, {
 			"terminal-actions": TerminalButton,
 			"chat-bottom": BottomTerminal,
